@@ -66,15 +66,17 @@
       "title": "Grafo LangGraph: state, nodes, router y guardrails",
       "description": "Grafo LangGraph del agente: estado tipado del run, nodo router que clasifica/valida el tipo de llamada, aristas condicionales hacia el scorer de kick-off o coaching, guardrails previos (transcript vacío, demasiado corto, idioma/contenido no puntuable) y nodos separados por responsabilidad (state, nodes, graph en archivos distintos).",
       "acceptance": [
-        "Existe src/agent/ con state.py, nodes.py y graph.py separados por responsabilidad",
+        "Existe src/agent/ con state.py, nodes.py, graph.py y sanitize.py separados por responsabilidad",
         "El grafo enruta por call_type: kickoff -> scorer kickoff, coaching -> scorer coaching (arista condicional)",
         "Guardrails: WHEN el transcript está vacío o por debajo de un mínimo de líneas/intercambios THEN el run termina en failed con error_reason descriptivo",
+        "Guardrails anti-inyección: la sanitización remueve caracteres de control/zero-width/bidi y las líneas con patrones de inyección de instrucciones (registradas en sanitization_flags) antes de cualquier llamada LLM",
+        "Guardrails anti-inyección: IF el transcript excede MAX_TRANSCRIPT_CHARS THEN el run termina en failed antes de llamar al LLM",
         "El estado del grafo es un modelo tipado (no dict suelto) y registra progreso para sobrevivir al cierre de la pestaña",
         "Cada nodo es una función pura testeable que recibe y devuelve estado",
-        "tests/test_agent_graph.py cubre: enrutado a cada rama, guardrail de transcript vacío, guardrail de transcript demasiado corto"
+        "tests/test_agent_graph.py cubre: enrutado a cada rama, guardrail de transcript vacío, guardrail de transcript demasiado corto, sanitización de inyección, transcript sobredimensionado"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 5,

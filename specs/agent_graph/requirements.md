@@ -45,3 +45,26 @@ graph ends.
 The graph MUST expose a single entry point `build_graph()` returning the
 compiled LangGraph runnable, and `run_scoring(run: Run, ...) -> ScoringState`
 as the only invocation API used by the API layer.
+
+## R10 (anti prompt-injection)
+The system MUST sanitize the transcript in a dedicated module
+(`src/agent/sanitize.py`) BEFORE any LLM call: remove control characters,
+zero-width and bidi-override characters, and cap the transcript length.
+
+## R11 (anti prompt-injection)
+IF the sanitized transcript exceeds `MAX_TRANSCRIPT_CHARS` THEN the guardrail
+MUST end the run in state `failed` with `error_reason` explaining the length
+limit, before any LLM call.
+
+## R12 (anti prompt-injection)
+WHEN a transcript line matches a known instruction-injection pattern (e.g.
+"ignore previous instructions", "system prompt", "you are now", fake
+`<system>`/`<assistant>` role tags) THEN the guardrail MUST remove those lines
+from the text sent to the LLM and record each removal in
+`state.sanitization_flags`; the flags MUST NOT alter the scoring verdict
+silently — they are surfaced with the run.
+
+## R13 (anti prompt-injection, defense in depth)
+The scoring prompt (feature 5, `build_prompt`) MUST frame the transcript as
+untrusted data inside explicit delimiters, with instructions to treat its
+content as a transcript to score and never as instructions to follow.

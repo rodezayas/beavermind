@@ -177,4 +177,22 @@ inconsistencia en el readme... podemos ajustarla por ahí a 100 exacto".
 
 **Status:** [Active]
 
+## [2026-08-23] Anti prompt-injection guardrails in the agent
+
+**Decision:** The agent's guardrails sanitize every transcript before any LLM
+call: strip control/zero-width/bidi characters, enforce a hard length cap
+(`MAX_TRANSCRIPT_CHARS`), and remove lines matching known
+instruction-injection patterns (recording them in
+`state.sanitization_flags`). Defense in depth: `build_prompt` (feature 5)
+frames the transcript as untrusted data inside explicit delimiters.
+
+**Reasoning:** The operator pastes arbitrary text; without sanitization that
+text could steer the LLM away from the rubric (fake instructions, role tags).
+Sanitization is deterministic (regex/charset), auditable via flags, and fails
+closed (oversized → run failed) instead of silently truncating meaning.
+
+**Source:** [User instruction]
+
+**Status:** [Active]
+
 <!-- Agent: append new entries below this line, most recent last -->
