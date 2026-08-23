@@ -37,7 +37,7 @@ Before scoring, check these conditions. If any apply, record which cap fired and
 | Next call NOT booked live during the call | 0/5 on D10 (non-recoverable, confirmed by Marcus: "I don't care if you're at minute 29") |
 | No connection to long-term vision at any point in the call | Max 10/15 on D3 |
 | Coach speaks >75% of the call (client passive/monologue) | Max 75 total |
-| No concrete accountability commitment the client owns before close — no specific, verifiable deliverable the client confirms. A single named anchor OR a progression-gated ask ("send me your X video(s) before I progress you", client confirms) both satisfy this and do NOT trigger the cap. | Max 10/15 on D6 |
+| No concrete accountability commitment the client owns before close — no specific, verifiable deliverable the client confirms. A single named anchor OR a progression-gated ask ("send me your X video(s) before I progress you", client confirms) both satisfy this and do NOT trigger the cap. | Max 7/10 on D6 |
 | Client struggle present but ignored or avoided | 0/5 on D8 (non-recoverable) |
 | No action steps stated for either party before close | Max 70 total |
 
@@ -201,7 +201,7 @@ Before scoring, check these conditions. If any apply, record which cap fired and
 
 ---
 
-### Dimension 6 — Action Steps & Accountability (15 pts)
+### Dimension 6 — Action Steps & Accountability (10 pts)
 
 **Pillar: JOURNEY — Clarity + Ownership**
 **SOP time allocation: 2–3 min**
@@ -210,10 +210,10 @@ Before scoring, check these conditions. If any apply, record which cap fired and
 
 | Score | Criteria |
 |---|---|
-| **15/15 — Elite** | Coach states commitments out loud: "I'll the video tool you feedback on ___ by ___." Client commitments are specific: "Film ___ by ___." / "Complete ___ daily." Client owns a weekly theme in their own words. If client is slipping, coach creates micro-commitments. If a behavior change is noticed, coach calls it out subtly. Both sides know exactly what's expected. |
-| **10/15 — Strong** | Clear commitments but lacks specific deadlines or measurability. One side more accountable than the other. Client commitment present but vague. |
-| **5/15 — Mid** | Vague action steps: "Do your workouts," "Let me know how it goes." No deadline, no specific task. No verbal ownership. |
-| **0/15 — Fail** | No clear next steps for either party. Call ends without accountability. |
+| **10/10 — Elite** | Coach states commitments out loud: "I'll the video tool you feedback on ___ by ___." Client commitments are specific: "Film ___ by ___." / "Complete ___ daily." Client owns a weekly theme in their own words. If client is slipping, coach creates micro-commitments. If a behavior change is noticed, coach calls it out subtly. Both sides know exactly what's expected. |
+| **7/10 — Strong** | Clear commitments but lacks specific deadlines or measurability. One side more accountable than the other. Client commitment present but vague. |
+| **3/10 — Mid** | Vague action steps: "Do your workouts," "Let me know how it goes." No deadline, no specific task. No verbal ownership. |
+| **0/10 — Fail** | No clear next steps for either party. Call ends without accountability. |
 
 **SOP structure to listen for:**
 - Coach: "I'll the video tool you feedback on ___ by ___."  

@@ -5,7 +5,13 @@
     "one_feature_at_a_time": true,
     "require_tests_to_close": true,
     "require_approved_spec_to_implement": true,
-    "valid_status": ["pending", "spec_ready", "in_progress", "done", "blocked"],
+    "valid_status": [
+      "pending",
+      "spec_ready",
+      "in_progress",
+      "done",
+      "blocked"
+    ],
     "sdd_required_when": "feature has \"sdd\": true"
   },
   "features": [
@@ -21,7 +27,7 @@
         "DimensionScore soporta score opcional (None) con disabled_reason para la dimensión opcional de coaching (D4)",
         "tests/test_schemas.py cubre: Run válido, Run failed sin error_reason rechazado, DimensionScore deshabilitada válida"
       ],
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 2,
@@ -37,7 +43,7 @@
         "Si call_type es inválido, se lanza excepción con mensaje claro",
         "tests/test_rubrics.py cubre: 12 dimensiones por rúbrica, suma 100, bandas correctas, D4 opcional en coaching, call_type inválido"
       ],
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 3,
@@ -52,7 +58,7 @@
         "No se tragan excepciones con except desnudo",
         "tests/test_llm_client.py cubre: falta de API key, respuesta no-JSON, y camino feliz con un fake/ stub (sin llamar a la API real)"
       ],
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 4,
@@ -68,7 +74,7 @@
         "tests/test_agent_graph.py cubre: enrutado a cada rama, guardrail de transcript vacío, guardrail de transcript demasiado corto"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 5,
@@ -84,7 +90,7 @@
         "tests/test_scoring.py cubre: reporte válido, score fuera de rango rechazado, banda inválida rechazada, D4 opcional con max 85"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 6,
@@ -101,7 +107,7 @@
         "tests/test_database.py cubre: create/get/update, run fallido con causa, run inexistente, usando un fake repository inyectable"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 7,
@@ -118,7 +124,7 @@
         "tests/test_api.py cubre los 6 casos anteriores con cliente de pruebas y dependencias inyectadas (fake repo, fake graph)"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 8,
@@ -134,7 +140,7 @@
         "tests/test_pdf.py cubre: PDF generado con bytes válidos (%PDF header), secciones presentes en el texto extraído, error con reporte inválido"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 9,
@@ -165,7 +171,7 @@
         "tests cubren la lógica de cliente de API usada por la UI (llamadas y manejo de errores)"
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     }
   ]
 }

@@ -158,4 +158,23 @@ rule.
 
 **Status:** [Active]
 
+## [2026-08-23] Coaching rubric adjusted: D6 15→10 pts to honor the declared 100 total
+
+**Decision:** `rubrics/coaching-call-rubric.md` declared "12 dimensions, 100
+points" and "100 when D4 active / 85 when disabled", but its dimensions summed
+105 (D6 — Action Steps & Accountability at 15 pts). D6 was reduced to 10 pts
+(buckets 10/7/3/0, cap "Max 7/10 on D6"). The inconsistency and the fix are
+documented in the README.
+
+**Reasoning:** The score must be out of 100 (pdf_format.md and the rubric's own
+scope note). Reducing D6 is the least damaging fix: D3 keeps its 15 pts as the
+"#1 loss dimension", all dimensions stay ≥5 pts, and only D6's own labels and
+cap change. Alternatives: scoring over the real 105 (contradicts the declared
+100) or leaving the loader failing (blocks the pipeline).
+
+**Source:** [User instruction] — "tiene que ser un score de 100, documenta esa
+inconsistencia en el readme... podemos ajustarla por ahí a 100 exacto".
+
+**Status:** [Active]
+
 <!-- Agent: append new entries below this line, most recent last -->

@@ -1,0 +1,166 @@
+"""Client for the Groq LLM API (OpenAI GPT-OSS 120B).
+
+Thin, dependency-free HTTP client with an injectable transport so tests run
+without network access. Every failure path raises an explicit error carrying
+context; nothing is swallowed.
+"""
+
+import json
+from typing import Protocol
+
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+from src.config import Settings
+
+#: Groq chat-completions endpoint
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+#: Model used for all scoring calls
+GROQ_MODEL = "openai/gpt-oss-120b"
+
+#: Seconds before a request is aborted so a run never hangs in `scoring`
+REQUEST_TIMEOUT_SECONDS = 120
+
+
+class LLMError(RuntimeError):
+    """Base error for LLM calls; carries HTTP status when available."""
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+class LLMAuthError(LLMError):
+    """Raised when GROQ_API_KEY is missing before any network call."""
+
+
+class LLMParseError(LLMError):
+    """Raised when the model reply cannot be parsed as JSON."""
+
+
+class Transport(Protocol):
+    """Minimal HTTP transport abstraction (injectable for tests)."""
+
+    def post(self, url: str, headers: dict[str, str], payload: dict) -> tuple[int, str]:
+        """POST `payload` as JSON and return (http_status, body_text)."""
+        ...  # pragma: no cover
+
+
+class UrllibTransport:
+    """Default transport built on the standard library."""
+
+    def post(self, url: str, headers: dict[str, str], payload: dict) -> tuple[int, str]:
+        """POST `payload` as JSON and return (http_status, body_text).
+
+        Raises:
+            LLMError: On connection failures, with the underlying reason.
+        """
+        request = Request(  # noqa: S310 - fixed https URL
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                return response.status, response.read().decode("utf-8")
+        except HTTPError as exc:
+            # HTTPError is also a response: surface status and body.
+            body = exc.read().decode("utf-8", errors="replace")
+            return exc.code, body
+        except URLError as exc:
+            raise LLMError(f"Groq API connection failed: {exc.reason}") from exc
+
+
+class GroqClient:
+    """Calls Groq's chat-completions API with the GPT-OSS 120B model."""
+
+    def __init__(self, settings: Settings, transport: Transport | None = None) -> None:
+        """Create a client.
+
+        Args:
+            settings: Application settings; must contain `groq_api_key`.
+            transport: HTTP transport; defaults to `UrllibTransport`.
+        """
+        if not settings.groq_api_key:
+            raise LLMAuthError(
+                "GROQ_API_KEY is missing: set it in the environment before "
+                "creating a GroqClient"
+            )
+        self._api_key = settings.groq_api_key  # never logged
+        self._transport = transport if transport is not None else UrllibTransport()
+
+    def complete(self, prompt: str) -> str:
+        """Send `prompt` to the model and return the reply text.
+
+        Raises:
+            LLMError: On non-2xx responses or connection failures; includes
+                the HTTP status and response detail.
+        """
+        status, body = self._transport.post(
+            GROQ_API_URL,
+            headers=self._headers(),
+            payload=self._payload(prompt),
+        )
+        if status >= 300:
+            raise LLMError(
+                f"Groq API error (HTTP {status}): {body[:500]}", status=status
+            )
+        try:
+            reply = json.loads(body)["choices"][0]["message"]["content"]
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
+            raise LLMError(
+                f"Unexpected Groq response shape: {body[:500]}"
+            ) from exc
+        if not isinstance(reply, str):
+            raise LLMError(f"Unexpected Groq response shape: {body[:500]}")
+        return reply
+
+    def complete_json(self, prompt: str) -> dict:
+        """Like `complete`, but parses the reply as a JSON object.
+
+        Raises:
+            LLMParseError: If the reply is not valid JSON; includes a
+                fragment of the offending reply.
+        """
+        reply = self.complete(prompt)
+        try:
+            parsed = json.loads(reply)
+        except json.JSONDecodeError as exc:
+            raise LLMParseError(
+                f"Model reply is not valid JSON: {reply[:300]}"
+            ) from exc
+        if not isinstance(parsed, dict):
+            raise LLMParseError(
+                f"Model reply is not a JSON object: {reply[:300]}"
+            )
+        return parsed
+
+    def _headers(self) -> dict[str, str]:
+        """Build request headers (authorization + JSON content type)."""
+        return {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+    @staticmethod
+    def _payload(prompt: str) -> dict:
+        """Build the chat-completions request body."""
+        return {
+            "model": GROQ_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+        }
+
+
+__all__ = [
+    "GROQ_API_URL",
+    "GROQ_MODEL",
+    "GroqClient",
+    "LLMAuthError",
+    "LLMError",
+    "LLMParseError",
+    "Transport",
+    "UrllibTransport",
+]
