@@ -1,0 +1,67 @@
+
+# ---- Environment & secrets
+.env
+.env.*
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.cer
+*.crt
+*.p7b
+*.p7c
+id_rsa
+id_ed25519
+id_ecdsa
+*.ppk
+*.token
+*.secret
+.credentials/
+secrets/
+*.service-account.json
+credentials.json
+client_secret*.json
+*.rdp
+*.sqlite
+*.sqlite3
+*.db
+
+# ---- Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+*.so
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.ipynb_checkpoints/
+
+# ---- IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.python-version
+
+# ---- Logs
+*.log
+logs/
+
+# ---- OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,171 @@
+{
+  "project": "scoring-system",
+  "description": "Emulador de operador: el operador pega un transcript, indica si es kick-off o coaching, y el sistema lo puntúa contra la rúbrica correspondiente (12 dimensiones, 100 pts) y devuelve un reporte descargable como PDF. Cada run tiene URL propia persistente; un run fallido reporta por qué falló.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "require_approved_spec_to_implement": true,
+    "valid_status": ["pending", "spec_ready", "in_progress", "done", "blocked"],
+    "sdd_required_when": "feature has \"sdd\": true"
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "project_scaffold",
+      "title": "Config, settings y schemas Pydantic",
+      "description": "Base del proyecto: configuración central (settings desde .env), y modelos Pydantic compartidos: CallType (kickoff|coaching), DimensionScore, Report, Run y estados de run.",
+      "acceptance": [
+        "Existe src/config.py con Settings que lee SUPABASE_*, GROQ_API_KEY y DATABASE desde .env y falla con mensaje claro si falta una variable obligatoria",
+        "Existe src/schemas.py con CallType, DimensionScore, Report y Run tipados",
+        "Run modela estados: pending, scoring, completed, failed (con campo error_reason obligatorio cuando failed)",
+        "DimensionScore soporta score opcional (None) con disabled_reason para la dimensión opcional de coaching (D4)",
+        "tests/test_schemas.py cubre: Run válido, Run failed sin error_reason rechazado, DimensionScore deshabilitada válida"
+      ],
+      "status": "spec_ready"
+    },
+    {
+      "id": 2,
+      "name": "rubric_loader",
+      "title": "Carga y parseo de rúbricas",
+      "description": "Carga las dos rúbricas (rubrics/coaching-call-rubric.md y rubrics/kickotff-call-rubric.md) y expone su estructura: 12 dimensiones, puntajes máximos, bandas (Elite/Strong/Inconsistent/At risk/Fail), global automatic score caps y la dimensión opcional D4 de coaching (max_possible 85 al deshabilitarse).",
+      "acceptance": [
+        "Existe src/rubrics.py con load_rubric(call_type) que devuelve un objeto Rubric tipado",
+        "Rubric expone 12 dimensiones con id, nombre y max_points que suman 100",
+        "Rubric expone las bandas con sus nombres exactos: Elite, Strong, Inconsistent, At risk, Fail",
+        "Rubric expone los global automatic score caps declarados en el markdown",
+        "La rúbrica coaching marca D4 como opcional y al deshabilitarla total max_possible pasa a 85",
+        "Si call_type es inválido, se lanza excepción con mensaje claro",
+        "tests/test_rubrics.py cubre: 12 dimensiones por rúbrica, suma 100, bandas correctas, D4 opcional en coaching, call_type inválido"
+      ],
+      "status": "spec_ready"
+    },
+    {
+      "id": 3,
+      "name": "llm_client",
+      "title": "Cliente Groq (GPT-OSS 120B)",
+      "description": "Cliente del LLM Groq (modelo OpenAI GPT-OSS 120B) que recibe un prompt y devuelve texto/JSON estructurado, con errores explícitos (sin credencial, timeout, respuesta no-JSON) que nunca se tragan en silencio.",
+      "acceptance": [
+        "Existe src/llm_client.py con una clase GroqClient que expone complete(prompt) -> str",
+        "El cliente usa GROQ_API_KEY de Settings y el modelo GPT-OSS 120B",
+        "Si falta GROQ_API_KEY, el error es explícito e identifica la variable faltante",
+        "Si la API falla o la respuesta no es JSON válido cuando se pide JSON, se lanza excepción con contexto (status, detalle)",
+        "No se tragan excepciones con except desnudo",
+        "tests/test_llm_client.py cubre: falta de API key, respuesta no-JSON, y camino feliz con un fake/ stub (sin llamar a la API real)"
+      ],
+      "status": "spec_ready"
+    },
+    {
+      "id": 4,
+      "name": "agent_graph",
+      "title": "Grafo LangGraph: state, nodes, router y guardrails",
+      "description": "Grafo LangGraph del agente: estado tipado del run, nodo router que clasifica/valida el tipo de llamada, aristas condicionales hacia el scorer de kick-off o coaching, guardrails previos (transcript vacío, demasiado corto, idioma/contenido no puntuable) y nodos separados por responsabilidad (state, nodes, graph en archivos distintos).",
+      "acceptance": [
+        "Existe src/agent/ con state.py, nodes.py y graph.py separados por responsabilidad",
+        "El grafo enruta por call_type: kickoff -> scorer kickoff, coaching -> scorer coaching (arista condicional)",
+        "Guardrails: WHEN el transcript está vacío o por debajo de un mínimo de líneas/intercambios THEN el run termina en failed con error_reason descriptivo",
+        "El estado del grafo es un modelo tipado (no dict suelto) y registra progreso para sobrevivir al cierre de la pestaña",
+        "Cada nodo es una función pura testeable que recibe y devuelve estado",
+        "tests/test_agent_graph.py cubre: enrutado a cada rama, guardrail de transcript vacío, guardrail de transcript demasiado corto"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "name": "scoring_report",
+      "title": "Motor de scoring y armado del reporte",
+      "description": "Convierte la salida del LLM en un Report válido contra la rúbrica: 12 dimensiones con score/reasoning/transcript lines/quick fix, the one thing, the brief, red flags, grade total y banda. Valida bandas, caps y la dimensión opcional; rechaza salidas que violen la rúbrica.",
+      "acceptance": [
+        "Existe src/scoring.py que construye un Report a partir de la respuesta del LLM + Rubric",
+        "WHEN una dimensión excede su max_points o usa una banda inexistente THEN se lanza error de validación con la dimensión implicada",
+        "WHEN la rúbrica coaching tiene D4 deshabilitada THEN total max_possible es 85 y el grade se calcula sobre 85",
+        "El Report incluye: the_one_thing (con score hipotético si se aplicara), brief, red_flags, grade (total + banda) y las 12 dimensiones con reasoning, transcript_lines y quick_fix",
+        "Las bandas usan los nombres exactos de la rúbrica, no propios",
+        "tests/test_scoring.py cubre: reporte válido, score fuera de rango rechazado, banda inválida rechazada, D4 opcional con max 85"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "name": "database_supabase",
+      "title": "Persistencia en Supabase: schema y queries",
+      "description": "Schema y capa de acceso a datos en Supabase: tabla de runs (id UUID como URL pública, call_type, estado, transcript, reporte JSON, error_reason, timestamps). Cada run es accesible por su URL propia y persiste entre sesiones.",
+      "acceptance": [
+        "Existe src/database/ con schema.sql (o migración equivalente) y src/database/repository.py",
+        "create_run(call_type, transcript) genera id UUID y estado inicial, y devuelve el run",
+        "get_run(run_id) devuelve el run completo o None si no existe",
+        "update_run permite guardar reporte completado o failed con error_reason",
+        "WHEN el run falla THEN error_reason queda persistido y es recuperable por get_run",
+        "Los datos persisten entre procesos (no hay estado en memoria como fuente de verdad)",
+        "tests/test_database.py cubre: create/get/update, run fallido con causa, run inexistente, usando un fake repository inyectable"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 7,
+      "name": "api_fastapi",
+      "title": "API FastAPI: crear run, consultar, PDF",
+      "description": "Endpoints FastAPI: POST /runs (transcript + call_type, dispara el scoring y devuelve la URL del run), GET /runs/{id} (estado, reporte o error con causa), GET /runs/{id}/report.pdf (PDF del reporte). El scoring corre en background para sobrevivir al cierre de la pestaña.",
+      "acceptance": [
+        "POST /runs con transcript y call_type válidos responde 201 con run_id y URL del run",
+        "POST /runs sin transcript o con call_type inválido responde 422/400 con mensaje claro",
+        "GET /runs/{id} devuelve estado pending/scoring mientras procesa, completed con reporte, o failed con error_reason",
+        "GET /runs/{id} con id inexistente responde 404 con mensaje claro",
+        "GET /runs/{id}/report.pdf devuelve el PDF cuando el run está completed, y 409 con explicación si no lo está",
+        "WHEN el scoring falla THEN el run queda en failed y GET /runs/{id} expone por qué falló",
+        "tests/test_api.py cubre los 6 casos anteriores con cliente de pruebas y dependencias inyectadas (fake repo, fake graph)"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 8,
+      "name": "pdf_generation",
+      "title": "Generación de PDF con fpdf2",
+      "description": "Renderiza el Report como PDF con fpdf2 siguiendo pdf_format.md: the one thing, the brief, red flags, grade y banda, 12 dimensiones (score, reasoning, transcript lines, quick fix) y estética cuidada.",
+      "acceptance": [
+        "Existe src/pdf_creation/report_pdf.py con render_pdf(report) -> bytes",
+        "El PDF contiene las secciones en el orden de pdf_format.md: the one thing, the brief, red flags, grade y banda, 12 dimensiones",
+        "Cada dimensión muestra score sobre su máximo, reasoning, transcript lines citadas y quick fix",
+        "Las bandas se imprimen con los nombres de la rúbrica (Elite, Strong, Inconsistent, At risk, Fail)",
+        "WHEN el reporte es inválido o incompleto THEN render_pdf falla con error claro en lugar de generar un PDF corrupto",
+        "tests/test_pdf.py cubre: PDF generado con bytes válidos (%PDF header), secciones presentes en el texto extraído, error con reporte inválido"
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 9,
+      "name": "tests_e2e",
+      "title": "Suite de integración end-to-end",
+      "description": "Prueba de extremo a extremo con LLM y Supabase simulados (stubs): transcript de transcripts/ -> POST /runs -> run completed -> reporte válido contra rúbrica -> PDF descargable; y el camino de fallo con causa visible.",
+      "acceptance": [
+        "Existe tests/test_e2e.py que recorre el flujo completo con stubs deterministas",
+        "Cubre camino feliz para kickoff y coaching usando transcripts reales de transcripts/",
+        "Cubre camino de fallo: el run queda failed y la causa es visible vía GET /runs/{id}",
+        "uv run pytest corre toda la suite en verde sin credenciales reales ni red"
+      ],
+      "sdd": false,
+      "status": "pending"
+    },
+    {
+      "id": 10,
+      "name": "frontend_dashboard",
+      "title": "Frontend: dashboard del operador (tecnología por decidir)",
+      "description": "UI donde el operador pega el transcript, elige kick-off o coaching, lanza el scoring y ve el reporte (one thing, brief, red flags, grade, 12 dimensiones abribles) con botón de descarga PDF. Tecnología por decidir entre Streamlit (workflow.jpg) y React + Node.js; la decisión se toma al cerrar el backend.",
+      "acceptance": [
+        "La UI permite pegar un transcript y seleccionar call_type (kick-off | coaching)",
+        "Al enviar, la UI muestra la URL única del run y su estado en vivo (pending/scoring/completed/failed)",
+        "WHEN el run falla THEN la UI muestra por qué falló",
+        "El reporte completed muestra: the one thing, the brief, red flags, grade con banda y las 12 dimensiones con score, reasoning, evidencia y quick fix",
+        "Hay un botón que descarga el PDF del run",
+        "La URL de un run sigue funcionando al reabrirla después (estado persistido)",
+        "tests cubren la lógica de cliente de API usada por la UI (llamadas y manejo de errores)"
+      ],
+      "sdd": true,
+      "status": "pending"
+    }
+  ]
+}
