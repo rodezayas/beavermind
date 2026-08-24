@@ -9,11 +9,15 @@ import pytest
 
 from src.config import Settings
 from src.llm_client import (
+    ANTHROPIC_API_URL,
+    ANTHROPIC_MODEL,
     GROQ_MODEL,
+    AnthropicClient,
     GroqClient,
     LLMAuthError,
     LLMError,
     LLMParseError,
+    make_llm_client,
 )
 
 VALID_SETTINGS = Settings(
@@ -116,3 +120,45 @@ def test_non_object_json_raises_parse_error():
     wrapped = json.dumps({"choices": [{"message": {"content": "[1, 2, 3]"}}]})
     with pytest.raises(LLMParseError, match="not a JSON object"):
         _client(FakeTransport(reply=wrapped)).complete_json("score")
+
+
+# --- Anthropic provider -------------------------------------------------------
+
+
+def test_anthropic_missing_key_raises_before_network():
+    """A missing ANTHROPIC_API_KEY fails fast naming the variable."""
+    settings = VALID_SETTINGS.model_copy(update={"anthropic_api_key": ""})
+    transport = FakeTransport()
+    with pytest.raises(LLMAuthError, match="ANTHROPIC_API_KEY"):
+        AnthropicClient(settings=settings, transport=transport)
+    assert transport.calls == []
+
+
+def test_anthropic_complete_happy_path():
+    """AnthropicClient sends the Messages contract and extracts the text."""
+    transport = FakeTransport(
+        reply=json.dumps(
+            {"content": [{"type": "text", "text": '{"total": 90}'}]}
+        )
+    )
+    settings = VALID_SETTINGS.model_copy(
+        update={"llm_provider": "anthropic", "anthropic_api_key": "sk-test"}
+    )
+    client = AnthropicClient(settings=settings, transport=transport)
+    assert client.complete_json("score this") == {"total": 90}
+    call = transport.calls[0]
+    assert call["url"] == ANTHROPIC_API_URL
+    assert call["payload"]["model"] == ANTHROPIC_MODEL
+    assert "max_tokens" in call["payload"]  # mandatory in the Messages API
+    assert call["headers"]["x-api-key"] == "sk-test"
+    assert "anthropic-version" in call["headers"]
+
+
+def test_factory_selects_provider_from_settings():
+    """make_llm_client returns the client matching llm_provider."""
+    groq_settings = VALID_SETTINGS
+    assert isinstance(make_llm_client(groq_settings), GroqClient)
+    anthropic_settings = VALID_SETTINGS.model_copy(
+        update={"llm_provider": "anthropic", "anthropic_api_key": "sk-test"}
+    )
+    assert isinstance(make_llm_client(anthropic_settings), AnthropicClient)

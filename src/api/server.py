@@ -18,7 +18,7 @@ from src.agent.nodes import ScoringFn
 from src.api.app import create_app
 from src.config import get_settings, load_env_file
 from src.database.repository import SupabaseRunRepository
-from src.llm_client import GroqClient
+from src.llm_client import make_llm_client
 from src.rubrics import load_rubric
 from src.scoring import build_prompt, build_report
 
@@ -27,14 +27,12 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 
 
-def make_scoring_fn(settings) -> ScoringFn:
+def make_scoring_fn(llm) -> ScoringFn:
     """Build the real scoring pipeline used by both rubric branches.
 
-    The returned callable loads the rubric for the call type, prompts Groq
-    with it, and validates the model output into a domain `Report`.
+    The returned callable loads the rubric for the call type, prompts the
+    configured LLM provider with it, and validates the output into a `Report`.
     """
-    llm = GroqClient(settings=settings)  # real HTTP transport
-
     def scoring_fn(call_type, transcript):
         """Score one transcript against its rubric end to end."""
         rubric = load_rubric(call_type)
@@ -45,7 +43,7 @@ def make_scoring_fn(settings) -> ScoringFn:
 
 
 def build_production_app():
-    """Assemble the API with real Supabase + Groq from the environment.
+    """Assemble the API with real Supabase + the configured LLM provider.
 
     Raises:
         ConfigError: If any mandatory environment variable is missing.
@@ -55,10 +53,11 @@ def build_production_app():
     supabase_url = f"https://{settings.supabase_project_id}.supabase.co"
     # The service-role key (SUPABASE_SECRET_KEY) is required for server writes
     client = create_client(supabase_url, settings.supabase_secret_key)
+    llm = make_llm_client(settings)  # provider chosen by LLM_PROVIDER
     return create_app(
         repo=SupabaseRunRepository(client),
-        llm=GroqClient(settings=settings),
-        scoring_fn=make_scoring_fn(settings),
+        llm=llm,
+        scoring_fn=make_scoring_fn(llm),
     )
 
 

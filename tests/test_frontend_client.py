@@ -75,6 +75,7 @@ def test_get_run_completed_returns_report():
                 "status": "completed",
                 "report": None,  # full report shape is covered by domain tests
                 "error_reason": None,
+                "created_at": "2026-08-24T10:00:00Z",
             },
         )
 
@@ -94,6 +95,7 @@ def test_failed_reason_surfaced():
                 "status": "failed",
                 "report": None,
                 "error_reason": "transcript too short to score",
+                "created_at": "2026-08-24T10:00:00Z",
             },
         )
 

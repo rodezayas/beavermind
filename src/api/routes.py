@@ -99,6 +99,7 @@ def get_run(
         status=run.status,
         report=run.report,
         error_reason=run.error_reason,
+        created_at=run.created_at,
     )
 
 

@@ -82,6 +82,35 @@ def test_database_variable_is_optional():
     assert settings.supabase_secret_key == "secret-key"
 
 
+# --- LLM provider selection ---------------------------------------------------
+
+
+def test_provider_anthropic_requires_its_own_key():
+    """With LLM_PROVIDER=anthropic, ANTHROPIC_API_KEY is the mandatory key."""
+    env = {
+        **FULL_ENV,
+        "LLM_PROVIDER": "anthropic",
+        "ANTHROPIC_API_KEY": "sk-test",
+    }
+    del env["GROQ_API_KEY"]  # Groq key not needed for this provider
+    settings = get_settings(env)
+    assert settings.llm_provider == "anthropic"
+    assert settings.anthropic_model == "claude-sonnet-5"
+
+
+def test_provider_anthropic_missing_key_fails():
+    env = {**FULL_ENV, "LLM_PROVIDER": "anthropic", "GROQ_API_KEY": ""}
+    with pytest.raises(ConfigError) as exc:
+        get_settings(env)
+    assert "ANTHROPIC_API_KEY" in str(exc.value)
+
+
+def test_provider_unknown_fails():
+    with pytest.raises(ConfigError) as exc:
+        get_settings({**FULL_ENV, "LLM_PROVIDER": "openai"})
+    assert "LLM_PROVIDER" in str(exc.value)
+
+
 # --- R3 / R5: enums --------------------------------------------------------
 
 

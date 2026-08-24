@@ -34,12 +34,11 @@ _BAND_THRESHOLDS: tuple[tuple[float, str], ...] = (
 _TRANSCRIPT_OPEN = "<transcript>"
 _TRANSCRIPT_CLOSE = "</transcript>"
 
-#: Max transcript characters embedded in a single LLM request. Sized to stay
-#: under Groq's free-tier 8000 tokens-per-minute limit with headroom: the
-#: model is a reasoner (it can spend 1-2k tokens thinking before the JSON),
-#: so the transcript budget is kept conservative. Longer calls are truncated
-#: (marker included) rather than failing the run.
-PROMPT_TRANSCRIPT_BUDGET_CHARS = 12_000
+#: Max transcript characters embedded in a single LLM request. The default
+#: model (`groq/compound-mini`) allows 70,000 TPM, so a full-length transcript
+#: (~120k chars ≈ 32k tokens) plus rubric overhead and the JSON response fits
+#: comfortably. Only pathological transcripts beyond this are truncated.
+PROMPT_TRANSCRIPT_BUDGET_CHARS = 120_000
 
 #: Marker appended when the transcript is truncated to fit the token budget
 _TRUNCATION_MARKER = "\n[... transcript truncated for length ...]"

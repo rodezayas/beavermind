@@ -4,6 +4,7 @@ Kept separate from the domain models in `src/schemas.py`: the wire contract
 can evolve without touching the domain (and vice versa).
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -34,6 +35,7 @@ class RunResponse(BaseModel):
     status: RunStatus
     report: Report | None = None
     error_reason: str | None = None
+    created_at: datetime  # when the run was created (shown in the dashboard)
 
 
 class ErrorResponse(BaseModel):

@@ -15,13 +15,18 @@ class ConfigError(RuntimeError):
     """Raised when mandatory configuration is missing or invalid."""
 
 
-#: Environment variables that must be present for the system to operate
+#: Environment variables that must be present regardless of LLM provider
 MANDATORY_ENV_VARS: tuple[str, ...] = (
     "SUPABASE_PROJECT_ID",
     "SUPABASE_API_KEY",
     "SUPABASE_SECRET_KEY",
-    "GROQ_API_KEY",
 )
+
+#: API key variable required per LLM provider (env LLM_PROVIDER)
+PROVIDER_KEY_VAR: dict[str, str] = {
+    "groq": "GROQ_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+}
 
 
 class Settings(BaseModel):
@@ -33,6 +38,10 @@ class Settings(BaseModel):
     groq_api_key: str
     database: str
     rubrics_dir: str = "rubrics"  # overridable for tests
+    groq_model: str = "groq/compound-mini"  # 70k TPM free tier; see README
+    llm_provider: str = "groq"  # "groq" | "anthropic" (env LLM_PROVIDER)
+    anthropic_api_key: str = ""  # required when llm_provider == "anthropic"
+    anthropic_model: str = "claude-sonnet-5"  # env ANTHROPIC_MODEL
 
 
 def load_env_file(path: str | Path = ".env") -> None:
@@ -74,7 +83,16 @@ def get_settings(environ: dict[str, str] | None = None) -> Settings:
             message names every missing variable.
     """
     env = os.environ if environ is None else environ
+    provider = env.get("LLM_PROVIDER", "groq").strip().lower()
+    if provider not in PROVIDER_KEY_VAR:
+        raise ConfigError(
+            f"Invalid LLM_PROVIDER {provider!r}: expected one of "
+            f"{', '.join(sorted(PROVIDER_KEY_VAR))}"
+        )
     missing = [name for name in MANDATORY_ENV_VARS if not env.get(name)]
+    provider_key_var = PROVIDER_KEY_VAR[provider]
+    if not env.get(provider_key_var):
+        missing.append(provider_key_var)
     if missing:
         raise ConfigError(
             f"Missing mandatory environment variables: {', '.join(missing)}"
@@ -83,9 +101,13 @@ def get_settings(environ: dict[str, str] | None = None) -> Settings:
         supabase_project_id=env["SUPABASE_PROJECT_ID"],
         supabase_api_key=env["SUPABASE_API_KEY"],
         supabase_secret_key=env["SUPABASE_SECRET_KEY"],
-        groq_api_key=env["GROQ_API_KEY"],
+        groq_api_key=env.get("GROQ_API_KEY", ""),
         database=env.get("DATABASE", ""),  # optional; unused by the current stack
         rubrics_dir=env.get("RUBRICS_DIR", "rubrics"),
+        groq_model=env.get("GROQ_MODEL", "groq/compound-mini"),
+        llm_provider=provider,
+        anthropic_api_key=env.get("ANTHROPIC_API_KEY", ""),
+        anthropic_model=env.get("ANTHROPIC_MODEL", "claude-sonnet-5"),
     )
 
 
