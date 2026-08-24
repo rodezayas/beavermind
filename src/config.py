@@ -42,6 +42,11 @@ class Settings(BaseModel):
     llm_provider: str = "groq"  # "groq" | "anthropic" (env LLM_PROVIDER)
     anthropic_api_key: str = ""  # required when llm_provider == "anthropic"
     anthropic_model: str = "claude-sonnet-5"  # env ANTHROPIC_MODEL
+    # "background" (default): POST /runs returns 201 and scores in a thread.
+    # "sync": POST /runs scores inline and returns the terminal status —
+    # required on serverless platforms (Vercel) where background threads die
+    # when the function is frozen after the response.
+    scoring_mode: str = "background"
 
 
 def load_env_file(path: str | Path = ".env") -> None:
@@ -108,6 +113,7 @@ def get_settings(environ: dict[str, str] | None = None) -> Settings:
         llm_provider=provider,
         anthropic_api_key=env.get("ANTHROPIC_API_KEY", ""),
         anthropic_model=env.get("ANTHROPIC_MODEL", "claude-sonnet-5"),
+        scoring_mode=env.get("SCORING_MODE", "background"),
     )
 
 

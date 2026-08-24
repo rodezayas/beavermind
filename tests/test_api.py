@@ -204,3 +204,22 @@ def test_error_messages_contain_no_secrets():
     text = probe.text.lower()
     for secret in ("test-key", "groq_api_key", "supabase", "secret"):
         assert secret not in text
+
+
+# --- SCORING_MODE=sync (serverless/Vercel) ------------------------------------
+
+
+def test_sync_mode_returns_terminal_status(monkeypatch):
+    """With SCORING_MODE=sync the 201 response already carries the outcome."""
+    monkeypatch.setenv("SCORING_MODE", "sync")
+    transport = _FakeTransport(_llm_json_reply())
+    client = _client(transport)
+    response = client.post(
+        "/runs", json={"transcript": TRANSCRIPT, "call_type": "kickoff"}
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "completed"  # no pending: scored inline
+    run_id = response.json()["run_id"]
+    final = client.get(f"/runs/{run_id}")
+    assert final.json()["status"] == "completed"
+    assert final.json()["report"] is not None

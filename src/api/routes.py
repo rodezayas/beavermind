@@ -1,6 +1,7 @@
 """API routes: create runs, consult them, download the PDF report."""
 
 import logging
+import os
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -19,29 +20,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _score_in_background(
-    repo: RunRepository, scoring_fn: ScoringFn, run_id: UUID
-) -> None:
-    """Run the scoring outside the request and persist the outcome (R8).
+def _score_now(repo: RunRepository, scoring_fn: ScoringFn, run_id: UUID) -> Run:
+    """Run the scoring and persist the outcome, returning the final run.
 
-    Every terminal state is persisted: the result survives the HTTP request,
-    the client tab and even process restarts.
+    Shared by the background task and the synchronous (serverless) mode:
+    every terminal state is persisted so the result survives the HTTP
+    request, the client tab and process restarts.
     """
     run = repo.get(run_id)
     if run is None:  # pragma: no cover - defensive; run was just created
-        logger.error("run %s vanished before scoring", run_id)
-        return
+        raise RuntimeError(f"run {run_id} vanished before scoring")
     repo.update(run.model_copy(update={"status": RunStatus.SCORING}))
     try:
         final_state = run_scoring(run, scoring_fn)
     except Exception as exc:  # noqa: BLE001 - boundary by design (R8)
-        repo.update(
-            run.model_copy(
-                update={"status": RunStatus.FAILED, "error_reason": f"{exc}"}
-            )
+        failed = run.model_copy(
+            update={"status": RunStatus.FAILED, "error_reason": f"{exc}"}
         )
+        repo.update(failed)
         logger.error("run %s scoring crashed: %s", run_id, exc)
-        return
+        return repo.get(run_id) or failed
     if final_state.status is RunStatus.COMPLETED:
         repo.update(
             run.model_copy(
@@ -57,6 +55,14 @@ def _score_in_background(
                 }
             )
         )
+    return repo.get(run_id) or run
+
+
+def _score_in_background(
+    repo: RunRepository, scoring_fn: ScoringFn, run_id: UUID
+) -> None:
+    """Run the scoring after the response via BackgroundTasks (R8)."""
+    _score_now(repo, scoring_fn, run_id)
 
 
 def _load_run_or_404(repo: RunRepository, run_id: str) -> Run:
@@ -78,9 +84,20 @@ def create_run(
     repo: RunRepository = Depends(get_repo),
     scoring_fn: ScoringFn = Depends(get_scoring_fn),
 ) -> CreateRunResponse:
-    """Persist a new pending run and start scoring in the background (R2)."""
+    """Persist a new run and score it (R2).
+
+    Mode depends on `SCORING_MODE`: `background` (default) schedules the
+    scoring after the 201 response; `sync` (serverless/Vercel) scores inline
+    so the response already carries the terminal status — background threads
+    do not survive serverless freezing.
+    """
     run = Run(call_type=payload.call_type, transcript=payload.transcript)
     repo.create(run)
+    if os.environ.get("SCORING_MODE", "background") == "sync":
+        final = _score_now(repo, scoring_fn, run.run_id)
+        return CreateRunResponse(
+            run_id=final.run_id, url=f"/runs/{final.run_id}", status=final.status
+        )
     background.add_task(_score_in_background, repo, scoring_fn, run.run_id)
     return CreateRunResponse(
         run_id=run.run_id, url=f"/runs/{run.run_id}", status=run.status

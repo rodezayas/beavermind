@@ -250,6 +250,26 @@ uv run streamlit run src/frontend/app.py   # dashboard en :8501
   alertas sobre tasa de `failed`.
 - *PDF cacheado* en Supabase Storage si crece el volumen de descargas.
 
+## Deploy
+
+**API en Vercel** (scoring síncrono):
+
+1. Environment Variables en el dashboard de Vercel: las de `.env`
+   (Supabase, LLM) **más `SCORING_MODE=sync`** — las funciones serverless se
+   congelan tras la respuesta, así que el scoring corre inline y el `201`
+   ya trae el estado final (`completed`/`failed`).
+2. `vercel.json` fija `maxDuration=300` (requiere plan Pro para Opus con
+   transcripts largos; en Hobby de 60 s usa `claude-sonnet-5`).
+3. `requirements.txt` (export de uv) alimenta el runtime Python;
+   entrypoint en `api/index.py`.
+
+**Dashboard en Streamlit Community Cloud:**
+
+- Repo + branch + `src/frontend/app.py`; en "Secrets" añade
+  `SCORING_API_URL=https://<tu-app>.vercel.app`.
+- Las URLs persistentes de los runs (`https://<streamlit-app>/?run_id=<uuid>`)
+  siguen funcionando: el reporte vive en Supabase, no en el deploy.
+
 ## Desarrollo
 
 - Workflow: Spec Driven Development — `docs/specs.md`; features y estados
