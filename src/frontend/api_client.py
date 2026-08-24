@@ -14,9 +14,14 @@ from pydantic import ValidationError
 from src.api.schemas import CreateRunRequest, CreateRunResponse, RunResponse
 from src.schemas import CallType
 
-#: Default timeout for API calls; scoring runs are async server-side, so no
-#: request here waits on the LLM itself.
+#: Default timeout for polling/status calls (GET /runs, PDF download): these
+#: never wait on the LLM itself.
 DEFAULT_TIMEOUT_SECONDS = 10.0
+
+#: Timeout for POST /runs: with SCORING_MODE=sync (the Vercel/serverless
+#: configuration) that request scores inline and only returns once the LLM
+#: finished, so it needs to outlast the whole scoring pipeline.
+CREATE_RUN_TIMEOUT_SECONDS = 90.0
 
 
 class ApiClientError(RuntimeError):
@@ -61,7 +66,13 @@ class ScoringApiClient:
         except ValidationError as exc:
             # Same contract as a 422 from the server: the UI shows one reason
             raise ApiClientError(f"invalid run request: {exc}") from exc
-        data = self._request_json("POST", "/runs", json=payload.model_dump(mode="json"), expected=(201,))
+        data = self._request_json(
+            "POST",
+            "/runs",
+            json=payload.model_dump(mode="json"),
+            expected=(201,),
+            timeout=CREATE_RUN_TIMEOUT_SECONDS,  # sync scoring waits on the LLM
+        )
         return CreateRunResponse.model_validate(data)
 
     def get_run(self, run_id: str | UUID) -> RunResponse:
