@@ -6,6 +6,7 @@ context; nothing is swallowed.
 """
 
 import json
+import time
 from typing import Protocol
 
 from urllib.error import HTTPError, URLError
@@ -21,6 +22,11 @@ GROQ_MODEL = "openai/gpt-oss-120b"
 
 #: Seconds before a request is aborted so a run never hangs in `scoring`
 REQUEST_TIMEOUT_SECONDS = 120
+
+#: Seconds to wait before the single retry of a truncated/invalid JSON reply.
+#: On the free tier, TPM variance can cut a completion mid-JSON; one retry
+#: after the per-minute window rolls over recovers most of these cases.
+JSON_RETRY_DELAY_SECONDS = 15.0
 
 
 class LLMError(RuntimeError):
@@ -120,10 +126,21 @@ class GroqClient:
     def complete_json(self, prompt: str) -> dict:
         """Like `complete`, but parses the reply as a JSON object.
 
+        A reply that is not valid JSON is retried once (TPM variance on the
+        free tier can truncate a completion mid-JSON); a second failure raises.
+
         Raises:
-            LLMParseError: If the reply is not valid JSON; includes a
-                fragment of the offending reply.
+            LLMParseError: If the reply is not valid JSON after the retry;
+                includes a fragment of the offending reply.
         """
+        try:
+            return self._complete_json_once(prompt)
+        except LLMParseError:
+            time.sleep(JSON_RETRY_DELAY_SECONDS)
+            return self._complete_json_once(prompt)
+
+    def _complete_json_once(self, prompt: str) -> dict:
+        """Single attempt of `complete_json` without retry logic."""
         reply = self.complete(prompt)
         try:
             parsed = json.loads(reply)

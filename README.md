@@ -51,6 +51,23 @@ Además, se eliminó `exclude-newer = "7 days"` de `[tool.uv]` en
 `pyproject.toml`: uv no interpreta ese valor como fecha relativa y rompía el
 parseo de settings en cada ejecución.
 
+## Decisión: sin límite de longitud de transcript
+
+El guardrail original fallaba el run cuando el transcript superaba
+`MAX_TRANSCRIPT_CHARS` (60k chars). En la práctica los transcripts reales
+(~64k chars) disparaban ese fallo, así que se cambió el comportamiento:
+
+- **Cualquier longitud se acepta.** La sanitización anti-inyección se
+  mantiene (protege la integridad del scoring; no limita tamaño).
+- El prompt se trunca al presupuesto `PROMPT_TRANSCRIPT_BUDGET_CHARS`
+  (16k chars) para respetar el rate limit del free tier de Groq (8000 TPM).
+  El modelo no es el cuello de botella: GPT-OSS-120B acepta 131k de
+  contexto; el límite es de tarifa, no de capacidad.
+- Trade-off conocido: en llamadas muy largas el scoring se basa en el inicio
+  del transcript. Para cobertura completa hay dos caminos: subir a Groq Dev
+  Tier (más TPM, sin cambios de código) o implementar scoring por chunks
+  multi-pasada.
+
 ## Desarrollo
 
 - Stack: Python 3.11+, uv, pytest, FastAPI, LangGraph, Pydantic, fpdf2, Supabase, Groq (GPT-OSS 120B).

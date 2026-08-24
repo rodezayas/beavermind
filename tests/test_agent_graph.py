@@ -181,14 +181,15 @@ def test_sanitize_keeps_clean_transcript_untouched():
     assert not result.too_long
 
 
-# --- R11: length cap --------------------------------------------------------
+# --- R11: length (no hard cap; prompt layer truncates) -----------------------
 
 
-def test_guardrail_rejects_oversized_transcript():
+def test_guardrail_accepts_oversized_transcript():
+    """Any transcript length is accepted; scoring proceeds (prompt truncates)."""
     oversized = VALID_TRANSCRIPT + "\n" + "[A]: " + "x" * MAX_TRANSCRIPT_CHARS
     state = _run_graph(_state(transcript=oversized), _recording_scoring_fn([]))
-    assert state.status is RunStatus.FAILED
-    assert "exceeds" in state.error_reason
+    assert state.status is not RunStatus.FAILED
+    assert state.status is RunStatus.COMPLETED
 
 
 # --- R12: injection removal -------------------------------------------------

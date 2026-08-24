@@ -35,10 +35,11 @@ _TRANSCRIPT_OPEN = "<transcript>"
 _TRANSCRIPT_CLOSE = "</transcript>"
 
 #: Max transcript characters embedded in a single LLM request. Sized to stay
-#: under Groq's free-tier 8000 tokens-per-minute limit: ~4000 prompt tokens +
-#: rubric/contract overhead + headroom for the JSON response. Longer calls are
-#: truncated (marker included) rather than failing the run.
-PROMPT_TRANSCRIPT_BUDGET_CHARS = 16_000
+#: under Groq's free-tier 8000 tokens-per-minute limit with headroom: the
+#: model is a reasoner (it can spend 1-2k tokens thinking before the JSON),
+#: so the transcript budget is kept conservative. Longer calls are truncated
+#: (marker included) rather than failing the run.
+PROMPT_TRANSCRIPT_BUDGET_CHARS = 12_000
 
 #: Marker appended when the transcript is truncated to fit the token budget
 _TRUNCATION_MARKER = "\n[... transcript truncated for length ...]"

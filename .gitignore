@@ -57,6 +57,8 @@ htmlcov/
 *.sublime-workspace
 *.sublime-project
 .python-version
+.design-mocks
+design-mocks
 
 # ---- Logs
 *.log

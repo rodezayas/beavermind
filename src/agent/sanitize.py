@@ -4,7 +4,9 @@ The operator pastes arbitrary text that will be embedded in an LLM prompt.
 This module makes sure nothing in that text can act as instructions:
 
 - Control, zero-width and bidi-override characters are removed.
-- Oversized transcripts are rejected (fail closed, no silent truncation).
+- Oversized transcripts are NOT rejected: any length is accepted and the
+  prompt layer (`scoring._fit_transcript`) truncates to the provider's token
+  budget; `too_long` is kept as an informational audit flag.
 - Lines matching known instruction-injection patterns are removed and
   recorded as audit flags.
 
@@ -16,7 +18,8 @@ import re
 
 from pydantic import BaseModel, Field
 
-#: Hard ceiling on transcript size before the run fails (R11)
+#: Audit threshold for transcript size (informational only: the prompt layer
+#: truncates long transcripts to the LLM token budget instead of failing)
 MAX_TRANSCRIPT_CHARS = 60_000
 
 #: Minimum number of speaker turns for a transcript to be scoreable (R5)
@@ -103,8 +106,8 @@ def sanitize_transcript(text: str) -> SanitizationResult:
 
     Returns:
         A `SanitizationResult` with the cleaned text and audit flags.
-        `too_long` marks transcripts over `MAX_TRANSCRIPT_CHARS`; the caller
-        must fail the run in that case (never silently truncate).
+        `too_long` is informational only: oversized transcripts are accepted
+        and truncated later at the prompt layer.
     """
     flags: list[str] = []
     cleaned, strip_flags = _strip_invisible(text)

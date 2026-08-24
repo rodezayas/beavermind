@@ -47,21 +47,16 @@ def route_after_router(state: ScoringState) -> str:
 def guardrail_node(state: ScoringState) -> ScoringState:
     """Sanitize the transcript and enforce the minimum-structure rules.
 
-    Order matters: sanitize first (R10-R12), then length cap (R11), then the
-    speaker-turn minimum (R5). All failures happen before any LLM call.
+    Order matters: sanitize first (R10-R12), then the speaker-turn minimum
+    (R5). All failures happen before any LLM call. There is no length cap:
+    transcripts of any size are accepted and the prompt layer truncates to
+    the provider's token budget (`PROMPT_TRANSCRIPT_BUDGET_CHARS`).
     """
     state = state.model_copy(update={"current_node": "guardrails"})
     if not state.transcript.strip():
         return _fail(state, "transcript is empty: nothing to score", "guardrails")
 
     result = sanitize_transcript(state.transcript)
-    if result.too_long:
-        return _fail(
-            state,
-            f"transcript exceeds the maximum of {len(result.text)} characters "
-            "after sanitization",
-            "guardrails",
-        )
     if count_speaker_turns(result.text) < MIN_SPEAKER_TURNS:
         return _fail(
             state,
