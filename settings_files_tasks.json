@@ -161,8 +161,8 @@
     {
       "id": 10,
       "name": "frontend_dashboard",
-      "title": "Frontend: dashboard del operador (tecnología por decidir)",
-      "description": "UI donde el operador pega el transcript, elige kick-off o coaching, lanza el scoring y ve el reporte (one thing, brief, red flags, grade, 12 dimensiones abribles) con botón de descarga PDF. Tecnología por decidir entre Streamlit (workflow.jpg) y React + Node.js; la decisión se toma al cerrar el backend.",
+      "title": "Frontend: dashboard del operador (Streamlit)",
+      "description": "UI Streamlit donde el operador pega el transcript, elige kick-off o coaching, lanza el scoring y ve el reporte (one thing, brief, red flags, grade, 12 dimensiones abribles) con botón de descarga PDF. Tecnología decidida: Streamlit (Opción A del design.md); cliente HTTP httpx con MockTransport para tests.",
       "acceptance": [
         "La UI permite pegar un transcript y seleccionar call_type (kick-off | coaching)",
         "Al enviar, la UI muestra la URL única del run y su estado en vivo (pending/scoring/completed/failed)",
@@ -173,7 +173,7 @@
         "tests cubren la lógica de cliente de API usada por la UI (llamadas y manejo de errores)"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "in_progress"
     }
   ]
 }

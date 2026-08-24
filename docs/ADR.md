@@ -196,3 +196,24 @@ closed (oversized → run failed) instead of silently truncating meaning.
 **Status:** [Active]
 
 <!-- Agent: append new entries below this line, most recent last -->
+
+## [2026-08-23] Frontend technology chosen: Streamlit, HTTP client httpx
+
+**Decision:** `frontend_dashboard` (feature 10) is built with Streamlit
+(design.md Opción A). The API client (`src/frontend/api_client.py`) uses
+`httpx` instead of the standard library's `urllib`.
+
+**Reasoning:** The dashboard is an internal operator tool; Streamlit delivers
+R1–R7 with a single Python page and no JS sub-project (React + Node rejected:
+build tooling, duplicated types, outside the repo's Python-first convention).
+For the client, httpx was preferred over urllib because its `MockTransport`
+gives first-class test doubles for R2–R8 and its typed exceptions map cleanly
+to `ApiClientError(reason)`. Alternative considered and lost: urllib with an
+injected opener (zero deps, but hand-rolled request plumbing and weaker test
+ergonomics). Streamlit and httpx are added to `pyproject.toml`; both must earn
+their place per AGENTS.md — this entry is that justification.
+
+**Source:** [User instruction] — "crea un dashboard streamlit sencillo" +
+approved spec gate; httpx chosen by the human when asked directly.
+
+**Status:** [Active]
