@@ -20,6 +20,37 @@ when switched off", pero la suma real de sus dimensiones era **105**
 con D4 deshabilitada, tal como la propia rúbrica declara. La rúbrica de
 kick-off no requería cambios (sumaba 100 exacto).
 
+## Problemas encontrados en la verificación real (feature 11) y sus soluciones
+
+Durante el E2E con credenciales reales (Supabase + Groq) aparecieron tres
+problemas, ya resueltos en el código:
+
+1. **Cloudflare bloqueaba las llamadas a Groq (HTTP 403, error 1010).**
+   El cliente HTTP usa `urllib`, cuyo User-Agent por defecto
+   (`Python-urllib/3.x`) está bloqueado por Cloudflare delante de la API de
+   Groq. Solución: cabecera `User-Agent: scoring-system/1.0` explícita en
+   `src/llm_client.py`.
+
+2. **El prompt excedía el límite de tokens del free tier (HTTP 413).** Groq
+   free tier permite 8000 TPM; los transcripts reales (~34k chars ≈ 8.6k
+   tokens) más la rúbrica superaban el límite. Solución: presupuesto
+   `PROMPT_TRANSCRIPT_BUDGET_CHARS = 16_000` en `src/scoring.py`; los
+   transcripts más largos se truncan conservando el inicio de la llamada y
+   marcando el corte (`[... transcript truncated for length ...]`). Si se
+   necesita puntuar llamadas completas sin recorte, hay que subir de tier en
+   Groq.
+
+3. **La tabla real de Supabase difiere del schema original.** La tabla del
+   proyecto se llama `beaverops` (no `runs`) y su columna de timestamp es
+   `updatet_at` (typo incluido, `timestamp without time zone`). El repositorio
+   (`src/database/repository.py`) usa esas constantes y mapea
+   `updatet_at` ↔ `updated_at` para que el modelo de dominio no cambie.
+   `src/database/schema.sql` refleja la tabla tal como existe.
+
+Además, se eliminó `exclude-newer = "7 days"` de `[tool.uv]` en
+`pyproject.toml`: uv no interpreta ese valor como fecha relativa y rompía el
+parseo de settings en cada ejecución.
+
 ## Desarrollo
 
 - Stack: Python 3.11+, uv, pytest, FastAPI, LangGraph, Pydantic, fpdf2, Supabase, Groq (GPT-OSS 120B).

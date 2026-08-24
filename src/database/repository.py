@@ -2,7 +2,7 @@
 
 The rest of the system depends only on the `RunRepository` protocol; storage
 is a swappable detail. `SupabaseRunRepository` is the production backend (the
-`runs` table is the single source of truth, so run URLs keep working across
+`beaverops` table is the single source of truth, so run URLs keep working across
 sessions); `InMemoryRunRepository` backs tests and local development.
 """
 
@@ -13,7 +13,12 @@ from uuid import UUID
 from src.schemas import Run
 
 #: Table name in the Supabase schema (see schema.sql)
-RUNS_TABLE = "runs"
+RUNS_TABLE = "beaverops"  # actual table name in the Supabase project
+#: Storage column for the last-update timestamp. The live Supabase table names
+#: it `updatet_at` (typo included) and types it as timestamp without time zone,
+#: while the domain model calls it `updated_at`; the repository maps between
+#: both names so the rest of the code stays clean.
+UPDATED_AT_COLUMN = "updatet_at"
 
 
 class RepositoryError(RuntimeError):
@@ -36,13 +41,18 @@ def _utcnow() -> datetime:
 
 
 def _to_row(run: Run) -> dict:
-    """Serialize a Run to the storage row shape."""
-    return run.model_dump(mode="json")
+    """Serialize a Run to the storage row shape (renames `updated_at`)."""
+    row = run.model_dump(mode="json")
+    row[UPDATED_AT_COLUMN] = row.pop("updated_at")
+    return row
 
 
 def _from_row(row: dict) -> Run:
-    """Deserialize a storage row back into a Run."""
-    return Run.model_validate(row)
+    """Deserialize a storage row back into a Run (renames `updatet_at`)."""
+    data = {**row}
+    if UPDATED_AT_COLUMN in data:
+        data["updated_at"] = data.pop(UPDATED_AT_COLUMN)
+    return Run.model_validate(data)
 
 
 class RunRepository(Protocol):
@@ -95,7 +105,7 @@ class InMemoryRunRepository:
 
 
 class SupabaseRunRepository:
-    """Production repository backed by the Supabase `runs` table."""
+    """Production repository backed by the Supabase `beaverops` table."""
 
     def __init__(self, client) -> None:
         """Create the repository.
@@ -152,7 +162,7 @@ class SupabaseRunRepository:
                 run_id=run.run_id,
                 cause=exc,
             ) from exc
-        return run.model_copy(update={"updated_at": row["updated_at"]})
+        return run.model_copy(update={"updated_at": row[UPDATED_AT_COLUMN]})
 
 
 __all__ = [

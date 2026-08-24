@@ -70,8 +70,16 @@ def test_config_missing_variable():
 
 def test_config_empty_variable_is_missing():
     with pytest.raises(ConfigError) as exc:
-        get_settings({**FULL_ENV, "DATABASE": ""})
-    assert "DATABASE" in str(exc.value)
+        get_settings({**FULL_ENV, "GROQ_API_KEY": ""})
+    assert "GROQ_API_KEY" in str(exc.value)
+
+
+def test_database_variable_is_optional():
+    """DATABASE is no longer mandatory: the stack only needs Supabase + Groq."""
+    env = {k: v for k, v in FULL_ENV.items() if k != "DATABASE"}
+    settings = get_settings(env)
+    assert settings.database == ""
+    assert settings.supabase_secret_key == "secret-key"
 
 
 # --- R3 / R5: enums --------------------------------------------------------

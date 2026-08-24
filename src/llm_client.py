@@ -138,10 +138,16 @@ class GroqClient:
         return parsed
 
     def _headers(self) -> dict[str, str]:
-        """Build request headers (authorization + JSON content type)."""
+        """Build request headers (authorization + JSON content type).
+
+        A custom User-Agent is required: Groq sits behind Cloudflare, which
+        rejects the default `Python-urllib/x.y` signature with HTTP 403
+        (error 1010).
+        """
         return {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "scoring-system/1.0",
         }
 
     @staticmethod

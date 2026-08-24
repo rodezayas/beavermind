@@ -173,7 +173,25 @@
         "tests cubren la lógica de cliente de API usada por la UI (llamadas y manejo de errores)"
       ],
       "sdd": true,
-      "status": "in_progress"
+      "status": "done"
+    },
+    {
+      "id": 11,
+      "name": "supabase_setup_e2e",
+      "title": "Setup de Supabase y verificación end-to-end real",
+      "description": "Fase de despliegue local pendiente tras cerrar el código (backend + frontend). Crear la tabla runs en Supabase con el schema del repo, y verificar el flujo completo con credenciales reales: transcript de transcripts/ -> API FastAPI (src/api.server) -> scoring Groq -> run completed en Supabase -> reporte visible y PDF descargable desde el dashboard Streamlit. Incluye reabrir un run por su URL días después sin re-evaluar.",
+      "acceptance": [
+        "La tabla runs existe en Supabase (SQL de src/database/schema.sql ejecutado en el SQL Editor)",
+        ".env corregido y completo: SUPABASE_PROJECT_ID, SUPABASE_API_KEY, SUPABASE_SECRET_KEY, GROQ_API_KEY (DATABASE es opcional desde la feature config)",
+        "uv run python -m src.api.server arranca y conecta con Supabase y Groq sin errores",
+        "POST /runs con un transcript real de transcripts/ termina en status=completed con reporte válido contra la rúbrica",
+        "GET /runs/{id}/report.pdf devuelve bytes PDF válidos para ese run",
+        "El dashboard Streamlit muestra el reporte completo y permite descargar el PDF",
+        "Reabrir la URL del run más tarde (o vía pestaña 'Open an existing run') muestra el resultado persistido sin re-scoring",
+        "Un camino de fallo real (p. ej. transcript vacío o muy corto) deja el run failed con error_reason visible en la UI"
+      ],
+      "sdd": false,
+      "status": "pending"
     }
   ]
 }

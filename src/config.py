@@ -6,6 +6,7 @@ needs. Missing mandatory variables fail fast with an explicit error.
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -20,7 +21,6 @@ MANDATORY_ENV_VARS: tuple[str, ...] = (
     "SUPABASE_API_KEY",
     "SUPABASE_SECRET_KEY",
     "GROQ_API_KEY",
-    "DATABASE",
 )
 
 
@@ -33,6 +33,30 @@ class Settings(BaseModel):
     groq_api_key: str
     database: str
     rubrics_dir: str = "rubrics"  # overridable for tests
+
+
+def load_env_file(path: str | Path = ".env") -> None:
+    """Load KEY=VALUE pairs from a `.env` file into `os.environ`.
+
+    Existing environment variables always win (the file never overrides an
+    explicitly exported value). Lines without `=` and comments (`#`) are
+    skipped. Values may be wrapped in single or double quotes.
+
+    Args:
+        path: Dotenv file location; missing files are ignored silently so
+            production deployments that configure real env vars keep working.
+    """
+    env_file = Path(path)
+    if not env_file.is_file():
+        return
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue  # comment, blank, or malformed line
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def get_settings(environ: dict[str, str] | None = None) -> Settings:
@@ -60,7 +84,7 @@ def get_settings(environ: dict[str, str] | None = None) -> Settings:
         supabase_api_key=env["SUPABASE_API_KEY"],
         supabase_secret_key=env["SUPABASE_SECRET_KEY"],
         groq_api_key=env["GROQ_API_KEY"],
-        database=env["DATABASE"],
+        database=env.get("DATABASE", ""),  # optional; unused by the current stack
         rubrics_dir=env.get("RUBRICS_DIR", "rubrics"),
     )
 

@@ -12,12 +12,12 @@ dependencies = [
     "pydantic>=2.13.4",
     "streamlit>=1.62.0",
     "supabase>=2.31.0",
+    "uvicorn>=0.52.4",
 ]
 
 
 [tool.uv]
 add-bounds = "exact"
-exclude-newer = "7 days"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

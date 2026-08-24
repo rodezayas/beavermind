@@ -6,13 +6,22 @@ run can also be reopened later by its id without re-scoring (R6).
 """
 
 import os
+import sys
 import time
+from pathlib import Path
 from uuid import UUID
 
 import streamlit as st
 
-from src.frontend.api_client import ApiClientError, ScoringApiClient
-from src.schemas import CallType, RunStatus
+# Streamlit puts the script's own directory (src/frontend/) on sys.path, not
+# the project root; prepend the root so `src.*` package imports resolve when
+# launched via `streamlit run src/frontend/app.py`.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from src.frontend.api_client import ApiClientError, ScoringApiClient  # noqa: E402
+from src.schemas import CallType, RunStatus  # noqa: E402
 
 #: Seconds between status polls while the run is pending/scoring (R2)
 POLL_INTERVAL_SECONDS = 2.0

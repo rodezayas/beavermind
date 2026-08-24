@@ -282,3 +282,24 @@ def test_prompt_frames_transcript_as_untrusted():
     assert "<transcript>" in prompt and "</transcript>" in prompt
     assert "UNTRUSTED DATA" in prompt
     assert transcript in prompt
+
+
+def test_prompt_truncates_oversized_transcript():
+    """Transcripts over the per-request budget are trimmed with a marker."""
+    from src.scoring import PROMPT_TRANSCRIPT_BUDGET_CHARS
+
+    long_transcript = "[A]: line\n" * (PROMPT_TRANSCRIPT_BUDGET_CHARS // 10 + 50)
+    prompt = build_prompt(CallType.KICKOFF, long_transcript, KICKOFF)
+    assert "transcript truncated" in prompt
+    # The full transcript must NOT be embedded (that would break TPM limits)
+    assert long_transcript not in prompt
+
+
+def test_prompt_keeps_short_transcript_intact():
+    from src.scoring import PROMPT_TRANSCRIPT_BUDGET_CHARS
+
+    short = "[A]: hello\n[B]: hi\n"
+    prompt = build_prompt(CallType.KICKOFF, short, KICKOFF)
+    assert short in prompt
+    assert "truncated" not in prompt
+    assert len(prompt) < PROMPT_TRANSCRIPT_BUDGET_CHARS + 5000

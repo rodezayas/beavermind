@@ -233,7 +233,22 @@ def test_schema_sql_defines_runs_table():
     from pathlib import Path
 
     ddl = Path("src/database/schema.sql").read_text()
-    assert "create table if not exists runs" in ddl
+    assert "create table if not exists beaverops" in ddl
     for column in ("run_id", "call_type", "status", "transcript", "report",
-                   "error_reason", "created_at", "updated_at"):
+                   "error_reason", "created_at", "updatet_at"):
         assert column in ddl
+
+
+# --- storage row mapping (live table uses `updatet_at`) -----------------------
+
+
+def test_row_mapping_renames_updated_at_column():
+    """Rows use the live column name `updatet_at`; domain keeps `updated_at`."""
+    from src.database.repository import UPDATED_AT_COLUMN, _to_row, _from_row
+
+    run = _run()
+    row = _to_row(run)
+    assert "updated_at" not in row  # domain name never leaks to storage
+    assert UPDATED_AT_COLUMN in row
+    restored = _from_row(row)
+    assert restored == run
