@@ -92,7 +92,7 @@
         "tests/test_scoring.py cubre: reporte válido, score fuera de rango rechazado, banda inválida rechazada, D4 opcional con max 85"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 6,
@@ -109,7 +109,7 @@
         "tests/test_database.py cubre: create/get/update, run fallido con causa, run inexistente, usando un fake repository inyectable"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 7,
@@ -126,7 +126,7 @@
         "tests/test_api.py cubre los 6 casos anteriores con cliente de pruebas y dependencias inyectadas (fake repo, fake graph)"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 8,
@@ -142,7 +142,7 @@
         "tests/test_pdf.py cubre: PDF generado con bytes válidos (%PDF header), secciones presentes en el texto extraído, error con reporte inválido"
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 9,
@@ -156,7 +156,7 @@
         "uv run pytest corre toda la suite en verde sin credenciales reales ni red"
       ],
       "sdd": false,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 10,

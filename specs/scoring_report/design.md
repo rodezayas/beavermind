@@ -27,12 +27,19 @@ def build_report(llm_output: dict, rubric: Rubric) -> Report
   "brief": "...",
   "red_flags": ["..."],
   "dimensions": [
-    {"dimension_id": 1, "score": 8, "reasoning": "quote-first...",
-     "transcript_lines": ["[Dana]: ..."], "quick_fix": "..."},
-    {"dimension_id": 4, "disabled": true, "disabled_reason": "..."}
+    {"dimension_id": 1, "score": 8, "band": "Strong", "reasoning": "quote-first...",
+     "transcript_lines": ["[Dana]: ..."], "quick_fix": "...",
+     "cap_fired": false},
+    ...one entry per dimension...
   ]
 }
 ```
+
+`cap_fired` (opcional, default false): el LLM evalúa las condiciones de la
+tabla "Global Automatic Score Caps" contra el transcript; el motor solo
+entonces recorta al máximo del cap y lo anota en `reasoning`. Separación de
+responsabilidades: la condición es semántica (LLM), la aplicación del máximo
+es determinista (código).
 
 `grade` no se pide al modelo: se calcula localmente sumando scores y aplicando
 las bandas de la "Scoring Bands Reference" (R5) — así el total siempre es

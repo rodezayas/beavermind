@@ -30,9 +30,12 @@ INCONSISTENT 70–79, AT RISK 60–69, FAIL <60) and MUST use the canonical band
 names — never invented ones.
 
 ## R6
-WHEN a global automatic score cap applies to a dimension (per the rubric's
-cap table) THEN the system MUST cap that dimension's score at the cap value
-and record which cap fired in the dimension's `reasoning`.
+WHEN a dimension entry declares `cap_fired: true` and the rubric declares an
+automatic score cap for that dimension THEN the system MUST cap that
+dimension's score at the cap value and record which cap fired in the
+dimension's `reasoning`. WHEN the entry does not declare `cap_fired` THEN the
+system MUST leave the score untouched (the cap conditions are semantic —
+evaluating them is the LLM's job; enforcing the maximum is ours).
 
 ## R7
 The `one_thing` section MUST include the projected score the call would have
