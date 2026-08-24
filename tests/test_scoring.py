@@ -303,3 +303,47 @@ def test_prompt_keeps_short_transcript_intact():
     assert short in prompt
     assert "truncated" not in prompt
     assert len(prompt) < PROMPT_TRANSCRIPT_BUDGET_CHARS + 5000
+
+
+# --- score_transcript: retry on contract violations ---------------------------
+
+
+class _FlakyLLM:
+    """LLM stub whose first reply disables a non-optional dimension."""
+
+    def __init__(self, outputs: list[dict]) -> None:
+        self._outputs = list(outputs)  # queued replies, popped per call
+        self.calls = 0  # number of complete_json invocations
+
+    def complete_json(self, prompt: str) -> dict:
+        self.calls += 1
+        return self._outputs.pop(0)
+
+
+def test_score_transcript_retries_on_contract_violation():
+    """First attempt disables D12 (not optional); the retry succeeds."""
+    from src.scoring import score_transcript
+
+    bad = _llm_output(
+        dimensions=[_dimension_entry(i) for i in range(1, 12)]
+        + [{"dimension_id": 12, "disabled": True, "disabled_reason": "not observed"}]
+    )
+    good = _llm_output()
+    llm = _FlakyLLM([bad, good])
+    report = score_transcript(llm, CallType.KICKOFF, "[A]: hi\n[B]: hello")
+    assert llm.calls == 2  # one retry consumed
+    assert report.grade.total is not None
+
+
+def test_score_transcript_raises_after_exhausted_retries():
+    """Every attempt violating the contract raises the validation error."""
+    from src.scoring import ScoringValidationError, score_transcript
+
+    bad = _llm_output(
+        dimensions=[_dimension_entry(i) for i in range(1, 12)]
+        + [{"dimension_id": 12, "disabled": True, "disabled_reason": "not observed"}]
+    )
+    llm = _FlakyLLM([bad, bad])
+    with pytest.raises(ScoringValidationError, match="D12"):
+        score_transcript(llm, CallType.KICKOFF, "[A]: hi\n[B]: hello")
+    assert llm.calls == 2

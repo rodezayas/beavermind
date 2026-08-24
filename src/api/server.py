@@ -19,8 +19,7 @@ from src.api.app import create_app
 from src.config import get_settings, load_env_file
 from src.database.repository import SupabaseRunRepository
 from src.llm_client import make_llm_client
-from src.rubrics import load_rubric
-from src.scoring import build_prompt, build_report
+from src.scoring import score_transcript
 
 #: Defaults so `uv run python -m src.api.server` works out of the box
 DEFAULT_HOST = "127.0.0.1"
@@ -35,9 +34,7 @@ def make_scoring_fn(llm) -> ScoringFn:
     """
     def scoring_fn(call_type, transcript):
         """Score one transcript against its rubric end to end."""
-        rubric = load_rubric(call_type)
-        output = llm.complete_json(build_prompt(call_type, transcript, rubric))
-        return build_report(output, rubric)
+        return score_transcript(llm, call_type, transcript)
 
     return scoring_fn
 

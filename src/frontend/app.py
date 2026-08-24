@@ -156,6 +156,52 @@ def _client() -> ScoringApiClient:
     return ScoringApiClient(base_url)
 
 
+def _run_url(run_id: str) -> str:
+    """Build the persistent, shareable URL of one run.
+
+    The report lives in Supabase, so the URL keeps working after closing the
+    tab, in another browser, or days later — it never expires.
+
+    Args:
+        run_id: The run identifier.
+
+    Returns:
+        An absolute dashboard URL like `http://<host>/?run_id=<uuid>`.
+    """
+    host = "localhost:8501"
+    try:  # st.context is only available while serving a real request
+        host = st.context.headers.get("Host", host)
+    except Exception:
+        pass  # fallback host keeps the URL usable in bare scripts/tests
+    return f"http://{host}/?run_id={run_id}"
+
+
+def _report_view(client: ScoringApiClient, run_id: str) -> None:
+    """Render one run addressed by its persistent URL (`?run_id=<uuid>`).
+
+    This is the landing view for a shared/bookmarked run URL: it fetches the
+    stored run without re-scoring (R6) and shows the report, the failure
+    reason, or the live status while still scoring.
+    """
+    if st.button("← Back to home"):
+        st.query_params.clear()
+        st.rerun()
+    try:
+        run = client.get_run(run_id)
+    except ApiClientError as exc:
+        st.error(f"Could not fetch the run: {exc.reason}")
+        return
+    st.code(_run_url(str(run.run_id)), language=None)  # the persistent URL (R2)
+    if run.status is RunStatus.FAILED:
+        st.error(f"❌ The run failed: {run.error_reason}")  # R4
+    elif run.status is RunStatus.COMPLETED:
+        _render_report(run)
+        _pdf_button(client, str(run.run_id))  # R5
+    else:
+        st.info(f"Run status: **{run.status.value}** — this URL stays valid; "
+                "reload it in a moment to see the result.")
+
+
 def _score_arc(total: float, max_possible: float, band: str) -> str:
     """Build the semicircular score gauge as inline SVG (mock: 67/100 + band).
 
@@ -232,7 +278,8 @@ def _render_report(run) -> None:
               <div class="run-sub">Scored against the {_esc(run.call_type.value)} rubric
               · {_esc(run.created_at.strftime("%Y-%m-%d %H:%M UTC"))}</div>
             </div>
-            """
+            """,
+            unsafe_allow_html=True,
         )
     with right:
         st.markdown(_score_arc(grade.total, grade.max_possible, grade.band), unsafe_allow_html=True)
@@ -375,7 +422,7 @@ def _home_view(client: ScoringApiClient) -> None:
             st.error(f"The run could not be created: {exc.reason}")  # R7
             st.stop()
         st.session_state["current_run_id"] = str(created.run_id)
-        st.code(created.url, language=None)  # unique persistent URL (R2)
+        st.code(_run_url(str(created.run_id)), language=None)  # persistent URL (R2)
         _poll_until_done(client, created.run_id)
         st.rerun()
 
@@ -425,11 +472,20 @@ def _home_view(client: ScoringApiClient) -> None:
 
 
 def main() -> None:
-    """Entry point of the Streamlit dashboard."""
+    """Entry point of the Streamlit dashboard.
+
+    A `?run_id=<uuid>` query parameter turns the app into a per-run landing
+    page: the persistent URL of a run renders its stored report directly,
+    even days later and from another browser (the report lives in Supabase).
+    """
     st.set_page_config(page_title="Call Scoring", page_icon="📊", layout="centered")
     st.markdown(_CSS, unsafe_allow_html=True)
     client = _client()
-    _home_view(client)
+    query_run_id = st.query_params.get("run_id")
+    if query_run_id:
+        _report_view(client, str(query_run_id))
+    else:
+        _home_view(client)
 
 
 if __name__ == "__main__":
