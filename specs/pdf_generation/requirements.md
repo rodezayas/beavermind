@@ -1,6 +1,6 @@
 # Requirements — pdf_generation
 
-> Feature 8 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 8 from `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST expose `render_pdf(report: Report) -> bytes` in

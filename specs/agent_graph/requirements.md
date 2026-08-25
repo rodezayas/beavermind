@@ -1,6 +1,6 @@
 # Requirements — agent_graph
 
-> Feature 4 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 4 of `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST implement the scoring pipeline as a LangGraph graph composed

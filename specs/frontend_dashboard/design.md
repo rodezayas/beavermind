@@ -1,52 +1,52 @@
 # Design — frontend_dashboard
 
-> Cómo se construye la feature 10. **La tecnología está abierta**: este design
-> deja registradas ambas opciones y el criterio de decisión. Se cierra antes
-> de implementar (decisión del humano).
+> How feature 10 is built. **The technology is open**: this design
+> records both options and the decision criterion. It is closed before
+> implementing (human decision).
 
-## Opción A — Streamlit (workflow-beavermind.jpg)
+## Option A — Streamlit (workflow-beavermind.jpg)
 
-| Aspecto | Evaluación |
+| Aspect | Evaluation |
 |---|---|
-| Esfuerzo | Mínimo: una página, `st.text_area`, `st.selectbox`, polling con `st.rerun` |
-| Riesgo | Bajo: todo Python, reusa `src/` directamente |
-| Contras | Menos control visual fino; polling menos elegante |
+| Effort | Minimal: one page, `st.text_area`, `st.selectbox`, polling with `st.rerun` |
+| Risk | Low: all Python, reuses `src/` directly |
+| Cons | Less fine visual control; less elegant polling |
 
-## Opción B — React + Node.js
+## Option B — React + Node.js
 
-| Aspecto | Evaluación |
+| Aspect | Evaluation |
 |---|---|
-| Esfuerzo | Alto: sub-proyecto JS (build, tooling, CORS), duplica tipos |
-| Riesgo | Medio: nueva cadena de herramientas fuera del repo Python |
-| Contras | AGENTS.md es Python-first; cada tipo del reporte se duplica en TS |
+| Effort | High: JS sub-project (build, tooling, CORS), duplicates types |
+| Risk | Medium: new toolchain outside the Python repo |
+| Cons | AGENTS.md is Python-first; every report type gets duplicated in TS |
 
-## Criterio de decisión (para el humano)
-- Si el dashboard es interno para el operador → **A (Streamlit)**: cumple R1–R7
-  con una fracción del esfuerzo y cero dependencias nuevas fuera del stack.
-- Si el dashboard es producto visible para clientes con identidad visual
-  propia → **B (React)**: el coste extra compra control total del look.
+## Decision criterion (for the human)
+- If the dashboard is internal for the operator → **A (Streamlit)**: meets R1–R7
+  with a fraction of the effort and zero new dependencies outside the stack.
+- If the dashboard is a client-facing product with its own visual identity
+  → **B (React)**: the extra cost buys full control of the look.
 
-## Estructura común (independiente de la elección)
+## Common structure (independent of the choice)
 
 | File | Purpose |
 |---|---|
-| `src/frontend/api_client.py` | `ScoringApiClient`: `create_run()`, `get_run()`, `download_pdf()`; mapea errores HTTP a `ApiClientError(reason)` |
-| `src/frontend/app.<ext>` | la vista: formulario, estado del run, reporte, botón PDF |
-| `tests/test_frontend_client.py` | cobertura R2–R7 contra un `FakeApi` (httpx MockTransport o stub propio) |
+| `src/frontend/api_client.py` | `ScoringApiClient`: `create_run()`, `get_run()`, `download_pdf()`; maps HTTP errors to `ApiClientError(reason)` |
+| `src/frontend/app.<ext>` | the view: form, run status, report, PDF button |
+| `tests/test_frontend_client.py` | R2–R7 coverage against a `FakeApi` (httpx MockTransport or own stub) |
 
 ## Decisions
-- **El cliente de API vive en Python testeable** (`src/frontend/api_client.py`,
-  R8) pase lo que pase con la vista: la lógica de llamadas y manejo de errores
-  es lo testeable; el render es del framework.
-- **Polling del estado** mientras `pending`/`scoring` (R2): intervalo fijo de
-  ~2 s hasta `completed`/`failed`.
-- **La decisión de tecnología se registra en `docs/ADR.md`** antes de
-  implementar (gate adicional dentro de esta feature).
+- **The API client lives in testable Python** (`src/frontend/api_client.py`,
+  R8) no matter what happens with the view: the call and error-handling logic
+  is what's testable; rendering belongs to the framework.
+- **Status polling** while `pending`/`scoring` (R2): fixed interval of
+  ~2 s until `completed`/`failed`.
+- **The technology decision is recorded in `docs/ADR.md`** before
+  implementing (additional gate within this feature).
 
 ## Alternative discarded
-- Servir el dashboard desde FastAPI con Jinja2 + HTMX: descartada por ahora —
-  mezcla responsabilidades del API (feature 7 ya cerrada como JSON API) con la
-  vista; se reconsiderará si el humano elige un punto medio.
+- Serving the dashboard from FastAPI with Jinja2 + HTMX: discarded for now —
+  it mixes API responsibilities (feature 7 already closed as a JSON API) with
+  the view; will be reconsidered if the human chooses a middle ground.
 
 ## Traceability preview
 - R1 → `test_create_run_sends_transcript_and_call_type`

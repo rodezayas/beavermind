@@ -1,15 +1,15 @@
 # Design — pdf_generation
 
-> Cómo se construye la feature 8. Decisiones tomadas antes de escribir código.
+> How feature 8 is built. Decisions made before writing code.
 
 ## Files created / modified
 
 | File | Action | Purpose |
 |---|---|---|
-| `src/pdf_creation/__init__.py` | create | paquete (ya existe el dir) |
+| `src/pdf_creation/__init__.py` | create | package (dir already exists) |
 | `src/pdf_creation/report_pdf.py` | create | `PdfRenderError`, `render_pdf(report) -> bytes` |
-| `tests/test_pdf.py` | create | cobertura R2–R7 |
-| `pyproject.toml` | modify | agregar `fpdf2` (aprobada) |
+| `tests/test_pdf.py` | create | R2–R7 coverage |
+| `pyproject.toml` | modify | add `fpdf2` (approved) |
 
 ## New signatures
 
@@ -22,28 +22,27 @@ def render_pdf(report: Report) -> bytes
 
 ## Layout (fpdf2)
 
-- Portada compacta: título del reporte, call type implícito en el contenido,
-  fecha, total + banda en tipografía destacada.
-- Secciones en el orden de `pdf_format.md` (R2) con encabezados repetidos en
-  cada página (`header()` del FPDF).
-- Dimensiones como bloques: `D<n> — <name> — <score>/<max>`; debajo,
-  Reasoning / Evidence (líneas citadas en itálica) / Quick fix.
-- Fuente estándar Helvetica (fpdf2 core font) — evita empotrar TTFs; el
-  contenido es inglés del reporte, sin necesidad de Unicode extendido.
+- Compact cover: report title, call type implied by the content,
+  date, total + band in prominent typography.
+- Sections in the order of `pdf_format.md` (R2) with repeated headers on
+  each page (the FPDF `header()`).
+- Dimensions as blocks: `D<n> — <name> — <score>/<max>`; below that,
+  Reasoning / Evidence (quoted lines in italics) / Quick fix.
+- Standard Helvetica font (fpdf2 core font) — avoids embedding TTFs; the
+  content is English from the report, no extended Unicode needed.
 
 ## Decisions
-- **fpdf2 puro, sin plantillas HTML** (weasyprint/pdfkit descartados): son
-  dependencias pesadas con binarios del sistema; fpdf2 ya está en el stack
-  aprobado y el layout del reporte es simple y secuencial.
-- **`render_pdf` devuelve `bytes`** (no escribe archivos): la API (feature 7)
-  lo sirve en memoria como respuesta HTTP; sin archivos temporales que
-  limpiar.
-- **Validación defensiva al inicio** (R6): reutiliza los validadores del
-  modelo `Report` y agrega chequeos propios antes de dibujar.
+- **Pure fpdf2, no HTML templates** (weasyprint/pdfkit discarded): they are
+  heavy dependencies with system binaries; fpdf2 is already in the approved
+  stack and the report layout is simple and sequential.
+- **`render_pdf` returns `bytes`** (does not write files): the API (feature 7)
+  serves it in memory as an HTTP response; no temporary files to clean up.
+- **Defensive validation up front** (R6): reuses the validators from the
+  `Report` model and adds its own checks before drawing.
 
 ## Alternative discarded
-- ReportLab: descartado — API más verbosa, licencia dual confusa para el mismo
-  resultado; fpdf2 cubre el caso con menos superficie.
+- ReportLab: discarded — more verbose API, confusing dual license for the same
+  result; fpdf2 covers the case with a smaller surface.
 
 ## Traceability preview
 - R1, R7 → `test_render_pdf_produces_valid_bytes`

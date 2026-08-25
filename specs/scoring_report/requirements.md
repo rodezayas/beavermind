@@ -1,6 +1,6 @@
 # Requirements — scoring_report
 
-> Feature 5 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 5 of `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST expose `build_report(llm_output: dict, rubric: Rubric) ->

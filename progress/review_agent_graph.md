@@ -2,19 +2,19 @@
 
 **Verdict: APPROVED**
 
-- R1–R12 cubiertos por tests concretos; R13 (framing del prompt) se verifica
-  al implementar `scoring_report` — registrado como follow-up, no bloquea.
-- T1–T16 completados; `uv run pytest` verde (48 passed, 0 red).
-- Convenciones: un concern por archivo (state/sanitize/nodes/graph), type
-  hints, docstrings, nodos puros, errores explícitos con contexto.
-- Security review (`skills/security-review/SKILL.md`) — foco de esta feature:
-  - Sanitización determinista ANTES de cualquier LLM call (orden verificado
-    en `guardrail_node`).
-  - Fail-closed en oversize (no truncamiento silencioso).
-  - Inyecciones removidas y auditadas en `sanitization_flags`; verificado que
-    el texto que llega a `scoring_fn` no contiene el payload
+- R1–R12 covered by concrete tests; R13 (prompt framing) is verified
+  when implementing `scoring_report` — recorded as a follow-up, not blocking.
+- T1–T16 completed; `uv run pytest` green (48 passed, 0 failed).
+- Conventions: one concern per file (state/sanitize/nodes/graph), type
+  hints, docstrings, pure nodes, explicit errors with context.
+- Security review (`skills/security-review/SKILL.md`) — focus of this feature:
+  - Deterministic sanitization BEFORE any LLM call (order verified
+    in `guardrail_node`).
+  - Fail-closed on oversize (no silent truncation).
+  - Injections removed and audited in `sanitization_flags`; verified that
+    the text reaching `scoring_fn` does not contain the payload
     (`test_injection_removed_before_scoring_fn_sees_it`).
-  - Excepciones del scorer no filtran stack traces al estado: solo el mensaje
-    como `error_reason` (mejora deliberada; sin secretos en el mensaje).
-  - Sin `except:` desnudo (el boundary usa `Exception` explícito con
-    justificación documentada R6).
+  - Scorer exceptions do not leak stack traces into the state: only the message
+    as `error_reason` (deliberate improvement; no secrets in the message).
+  - No bare `except:` (the boundary uses an explicit `Exception` with
+    documented justification R6).

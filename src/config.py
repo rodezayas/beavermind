@@ -44,8 +44,8 @@ class Settings(BaseModel):
     anthropic_model: str = "claude-sonnet-5"  # env ANTHROPIC_MODEL
     # "background" (default): POST /runs returns 201 and scores in a thread.
     # "sync": POST /runs scores inline and returns the terminal status —
-    # required on serverless platforms (Vercel) where background threads die
-    # when the function is frozen after the response.
+    # for platforms where background threads die with the request
+    # (e.g. serverless). On Render the default works fine.
     scoring_mode: str = "background"
 
 

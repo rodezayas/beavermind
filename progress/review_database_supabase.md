@@ -2,12 +2,12 @@
 
 **Verdict: APPROVED**
 
-- R1–R8 cubiertos por tests concretos; `uv run pytest` verde (90 passed).
-- Tareas del spec completadas sin desviaciones; `supabase` agregada al
-  pyproject (dependencia aprobada).
-- Convenciones: protocolo tipado, errores explícitos con run_id y causa,
-  docstrings y type hints completos.
-- Security review: ninguna credencial en el código (el cliente entra inyectado
-  desde Settings); `schema.sql` sin políticas client-facing (service-role
-  only); serialización estricta via `model_dump(mode="json")` /
-  `model_validate` — sin eval ni deserialización dinámica.
+- R1–R8 covered by concrete tests; `uv run pytest` green (90 passed).
+- Spec tasks completed without deviations; `supabase` added to the
+  pyproject (approved dependency).
+- Conventions: typed protocol, explicit errors with run_id and cause,
+  complete docstrings and type hints.
+- Security review: no credentials in the code (the client comes injected
+  from Settings); `schema.sql` without client-facing policies (service-role
+  only); strict serialization via `model_dump(mode="json")` /
+  `model_validate` — no eval or dynamic deserialization.

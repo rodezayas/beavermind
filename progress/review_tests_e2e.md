@@ -2,12 +2,12 @@
 
 **Verdict: APPROVED**
 
-- Aceptación completa de la feature 9: flujo feliz (kickoff + coaching con
-  transcripts reales), camino de fallo con causa visible, todo con stubs
-  deterministas (sin red ni credenciales). `uv run python -m pytest`:
+- Full acceptance of feature 9: happy flow (kickoff + coaching with
+  real transcripts), failure path with visible cause, all with deterministic
+  stubs (no network or credentials). `uv run python -m pytest`:
   114 passed.
-- Security review: los e2e verifican que el prompt al LLM lleva el
-  transcript delimitado como dato no confiable; ningún secreto en el código
-  de pruebas.
-- Nota para el README/devs: usar `uv run python -m pytest` (un pytest global
-  en `~/.local/bin` ensombrece al del venv).
+- Security review: the e2e tests verify that the prompt to the LLM carries the
+  transcript delimited as untrusted data; no secrets in the test
+  code.
+- Note for the README/devs: use `uv run python -m pytest` (a global pytest
+  in `~/.local/bin` shadows the venv one).

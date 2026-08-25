@@ -1,6 +1,6 @@
 # Tasks — frontend_dashboard
 
-- [ ] T0 — HUMANO: decidir tecnología (Streamlit vs React+Node) y registrarla en `docs/ADR.md`. Covers: design.md.
+- [ ] T0 — HUMAN: decide the technology (Streamlit vs React+Node) and record it in `docs/ADR.md`. Covers: design.md.
 - [ ] T1 — Create `src/frontend/api_client.py` with `ScoringApiClient` and `ApiClientError`. Covers: R2, R7, R8.
 - [ ] T2 — Implement `create_run(transcript, call_type)` mapping 201/422. Covers: R1, R2.
 - [ ] T3 — Implement `get_run(run_id)` returning view state (status, report | error_reason). Covers: R3, R4, R6.

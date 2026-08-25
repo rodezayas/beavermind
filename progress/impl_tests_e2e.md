@@ -1,19 +1,19 @@
 # Implementation — tests_e2e
 
-## Acceptance (settings_files_tasks.json, feature 9 — sin spec SDD)
-- [x] `tests/test_e2e.py` recorre el flujo completo con stubs deterministas
-      (transporte LLM falso + `InMemoryRunRepository`; el scoring/prompt/report
-      son los reales).
-- [x] Camino feliz para kickoff (`transcripts/kickoff-01.txt`) y coaching
-      (`transcripts/coaching-01.txt`) con transcripts reales.
-- [x] Camino de fallo: transcript de 1 turno → run `failed` con
-      `error_reason` visible vía `GET /runs/{id}`; PDF → 409.
-- [x] `uv run python -m pytest`: 114 passed, sin credenciales reales ni red.
+## Acceptance (settings_files_tasks.json, feature 9 — no SDD spec)
+- [x] `tests/test_e2e.py` walks the full flow with deterministic stubs
+      (fake LLM transport + `InMemoryRunRepository`; scoring/prompt/report
+      are the real ones).
+- [x] Happy path for kickoff (`transcripts/kickoff-01.txt`) and coaching
+      (`transcripts/coaching-01.txt`) with real transcripts.
+- [x] Failure path: 1-turn transcript → run `failed` with
+      `error_reason` visible via `GET /runs/{id}`; PDF → 409.
+- [x] `uv run python -m pytest`: 114 passed, without real credentials or network.
 
 ## Notes
-- El transporte falso registra los prompts: el test verifica que el LLM
-  recibe el transcript dentro de los delimitadores `<transcript>`
-  (defensa anti-inyección de punta a punta).
-- Nota operativa: `uv run pytest` resolvía un pytest del sistema
-  (`~/.local/bin/pytest`) sin las deps del venv; el comando verificado es
-  `uv run python -m pytest` (pytest añadido como dev-dependency).
+- The fake transport records the prompts: the test verifies that the LLM
+  receives the transcript inside the `<transcript>` delimiters
+  (end-to-end anti-injection defense).
+- Operational note: `uv run pytest` resolved a system pytest
+  (`~/.local/bin/pytest`) without the venv deps; the verified command is
+  `uv run python -m pytest` (pytest added as a dev-dependency).

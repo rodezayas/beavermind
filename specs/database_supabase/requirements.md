@@ -1,6 +1,6 @@
 # Requirements — database_supabase
 
-> Feature 6 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 6 of `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST define the storage schema in `src/database/schema.sql`: a

@@ -1,15 +1,15 @@
 # Design — project_scaffold
 
-> Cómo se construye la feature 1. Decisiones tomadas antes de escribir código.
+> How feature 1 is built. Decisions made before writing code.
 
 ## Files created / modified
 
 | File | Action | Purpose |
 |---|---|---|
-| `src/config.py` | create | `Settings` (pydantic) + `get_settings()` cacheado |
+| `src/config.py` | create | `Settings` (pydantic) + cached `get_settings()` |
 | `src/schemas.py` | create | `CallType`, `RunStatus`, `Run`, `DimensionScore`, `Grade`, `Report` |
-| `tests/test_schemas.py` | create | Cobertura de R2–R9 |
-| `src/__init__.py`, `tests/__init__.py` | create | Paquetes importables |
+| `tests/test_schemas.py` | create | Coverage of R2–R9 |
+| `src/__init__.py`, `tests/__init__.py` | create | Importable packages |
 
 ## New signatures
 
@@ -27,27 +27,27 @@ def get_settings() -> Settings:  # cached; raises ConfigError naming the missing
 # src/schemas.py
 class CallType(StrEnum): KICKOFF = "kickoff"; COACHING = "coaching"
 class RunStatus(StrEnum): PENDING = "pending"; SCORING = "scoring"; COMPLETED = "completed"; FAILED = "failed"
-class Run(BaseModel): ...             # model_validator: failed ⇒ error_reason no vacío (R6)
-class DimensionScore(BaseModel): ...  # validator: disabled ⇒ score/band None + reason (R8)
+class Run(BaseModel): ...             # model_validator: failed ⇒ non-empty error_reason (R6)
+class DimensionScore(BaseModel): ...  # validator: disabled ⇒ None score/band + reason (R8)
 class Grade(BaseModel): total: float; band: str; max_possible: float
-class Report(BaseModel): ...          # validator: exactamente 12 dimensiones (R9)
+class Report(BaseModel): ...          # validator: exactly 12 dimensions (R9)
 ```
 
 ## Exceptions
-- `ConfigError(RuntimeError)` en `src/config.py` — mensaje nombra la variable faltante.
+- `ConfigError(RuntimeError)` in `src/config.py` — the message names the missing variable.
 
 ## Decisions
-- **Pydantic v2** (ya en el stack aprobado): las reglas condicionales R6/R8 viven
-  como validators en el modelo, no duplicadas en los llamadores.
-- **StrEnum** para `CallType`/`RunStatus`: serializa a JSON y compara directo con
-  los strings de la API sin capa de conversión.
-- **Settings leyendo `os.getenv` manualmente** (sin `pydantic-settings`): solo
-  hacen falta 5 variables; la dependencia extra no gana nada aquí.
+- **Pydantic v2** (already in the approved stack): the conditional rules R6/R8 live
+  as validators on the models, not duplicated in the callers.
+- **StrEnum** for `CallType`/`RunStatus`: serializes to JSON and compares directly with
+  the API strings without a conversion layer.
+- **Settings reading `os.getenv` manually** (without `pydantic-settings`): only
+  5 variables are needed; the extra dependency buys nothing here.
 
 ## Alternative discarded
-- `dataclasses` solo stdlib: descartada porque imponer R6/R8 exigiría
-  `__post_init__` manual repetido en cada modelo; pydantic centraliza la
-  validación y ya está aprobado en el stack.
+- stdlib-only `dataclasses`: discarded because enforcing R6/R8 would require
+  manual, repeated `__post_init__` in each model; pydantic centralizes the
+  validation and is already approved in the stack.
 
 ## Traceability preview
 - R2 → `test_config_missing_variable`

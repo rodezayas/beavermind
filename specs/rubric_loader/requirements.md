@@ -1,6 +1,6 @@
 # Requirements — rubric_loader
 
-> Feature 2 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 2 of `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST expose `load_rubric(call_type: CallType) -> Rubric` in

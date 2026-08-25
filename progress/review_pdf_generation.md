@@ -2,9 +2,9 @@
 
 **Verdict: APPROVED**
 
-- R1–R7 cubiertos por tests concretos; `uv run pytest` verde (101 passed).
-- Tareas del spec completadas; `fpdf2` agregada (aprobada).
-- Convenciones: type hints, docstrings, errores explícitos antes de dibujar.
-- Security review: el contenido del reporte pasa por `_safe()` (encoding
-  controlado, sin inyección de objetos PDF); no hay ejecución de datos del
-  transcript; `render_pdf` opera en memoria (sin archivos temporales).
+- R1–R7 covered by concrete tests; `uv run pytest` green (101 passed).
+- Spec tasks completed; `fpdf2` added (approved).
+- Conventions: type hints, docstrings, explicit errors before drawing.
+- Security review: report content goes through `_safe()` (controlled
+  encoding, no PDF object injection); there is no execution of transcript
+  data; `render_pdf` operates in memory (no temporary files).

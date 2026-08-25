@@ -87,9 +87,9 @@ def create_run(
     """Persist a new run and score it (R2).
 
     Mode depends on `SCORING_MODE`: `background` (default) schedules the
-    scoring after the 201 response; `sync` (serverless/Vercel) scores inline
-    so the response already carries the terminal status — background threads
-    do not survive serverless freezing.
+    scoring after the 201 response; `sync` scores inline so the response
+    already carries the terminal status — useful on platforms where
+    background threads do not survive the request (e.g. serverless).
     """
     run = Run(call_type=payload.call_type, transcript=payload.transcript)
     repo.create(run)

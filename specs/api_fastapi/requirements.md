@@ -1,6 +1,6 @@
 # Requirements — api_fastapi
 
-> Feature 7 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
+> Feature 7 of `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
 
 ## R1
 The system MUST expose a FastAPI application factory `create_app(repo,

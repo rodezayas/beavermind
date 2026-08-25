@@ -172,8 +172,8 @@ scope note). Reducing D6 is the least damaging fix: D3 keeps its 15 pts as the
 cap change. Alternatives: scoring over the real 105 (contradicts the declared
 100) or leaving the loader failing (blocks the pipeline).
 
-**Source:** [User instruction] — "tiene que ser un score de 100, documenta esa
-inconsistencia en el readme... podemos ajustarla por ahí a 100 exacto".
+**Source:** [User instruction] — "it has to be a score out of 100, document
+that inconsistency in the readme... we can adjust it there to exactly 100".
 
 **Status:** [Active]
 
@@ -200,7 +200,7 @@ closed (oversized → run failed) instead of silently truncating meaning.
 ## [2026-08-23] Frontend technology chosen: Streamlit, HTTP client httpx
 
 **Decision:** `frontend_dashboard` (feature 10) is built with Streamlit
-(design.md Opción A). The API client (`src/frontend/api_client.py`) uses
+(design.md Option A). The API client (`src/frontend/api_client.py`) uses
 `httpx` instead of the standard library's `urllib`.
 
 **Reasoning:** The dashboard is an internal operator tool; Streamlit delivers

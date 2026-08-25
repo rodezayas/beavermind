@@ -206,7 +206,7 @@ def test_error_messages_contain_no_secrets():
         assert secret not in text
 
 
-# --- SCORING_MODE=sync (serverless/Vercel) ------------------------------------
+# --- SCORING_MODE=sync --------------------------------------------------------
 
 
 def test_sync_mode_returns_terminal_status(monkeypatch):

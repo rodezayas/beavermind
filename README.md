@@ -2,132 +2,133 @@ repo: https://github.com/lukecala/hiring-ai-dev-exercise
 
 # Scoring System
 
-Emulador de operador: pega un transcript de llamada, indica si es *kick-off*
-o *coaching*, y el sistema lo puntúa contra la rúbrica correspondiente
-(12 dimensiones, 100 pts) y devuelve un reporte descargable como PDF.
+An operator emulator: paste a call transcript, indicate whether it is a
+*kick-off* or *coaching* call, and the system scores it against the matching
+rubric (12 dimensions, 100 pts) and returns a downloadable PDF report.
 
 ## Overview
 
-- **Qué es:** una aplicación web (FastAPI + LangGraph + Streamlit) que
-  evalúa llamadas de ventas contra rúbricas del "Halden Method" usando un
-  LLM, con validación determinista de resultados.
-- **Quién lo usa:** operadores/coaches que revisan la calidad de llamadas
-  kick-off y coaching.
-- **Qué hace:** recibe un transcript, lo enruta a la rúbrica correcta, lo
-  puntúa dimensión por dimensión con evidencia citada, calcula grade y
-  banda, persiste el resultado y lo sirve como PDF.
-- **Por qué existe:** eliminar la evaluación manual, subjetiva y lenta de
-  llamadas, dejando evidencia trazable y persistente por run.
+- **What it is:** a web application (FastAPI + LangGraph + Streamlit) that
+  evaluates sales calls against "Halden Method" rubrics using an LLM, with
+  deterministic validation of results.
+- **Who uses it:** operators/coaches reviewing kick-off and coaching call
+  quality.
+- **What it does:** receives a transcript, routes it to the correct rubric,
+  scores it dimension by dimension with cited evidence, computes grade and
+  band, persists the result and serves it as a PDF.
+- **Why it exists:** remove slow, subjective manual call evaluation,
+  leaving traceable, persistent evidence per run.
 
 ## What Problem Does It Solve?
 
-- **Problema actual:** evaluar una llamada contra una rúbrica de 12
-  dimensiones a mano toma mucho tiempo y depende del criterio de cada
-  revisor.
-- **Workflow existente:** el coach escucha/lee la llamada, cruza cada
-  dimensión con la rúbrica markdown, asigna puntos, redacta el feedback y
-  lo entrega en un documento.
-- **Pain point:** lentitud, inconsistencia entre revisores y falta de
-  evidencia citada que sostenga cada puntaje.
-- **Consecuencia:** feedback tardío o superficial; los coaches no tienen
-  una acción concreata y priorizada por llamada.
-- **Mejora:** el operador pega el transcript y en ~1 minuto obtiene un
-  reporte consistente (mismas reglas para todos), con evidencia citada,
-  "the one thing", brief, red flags y quick fix por dimensión — descargable
-  en PDF y accesible por URL persistente.
+- **Current problem:** manually evaluating a call against a 12-dimension
+  rubric takes a long time and depends on each reviewer's judgment.
+- **Existing workflow:** the coach listens to/reads the call, crosses each
+  dimension with the markdown rubric, assigns points, writes feedback and
+  delivers it in a document.
+- **Pain point:** slowness, inconsistency between reviewers and lack of
+  cited evidence supporting each score.
+- **Consequence:** late or superficial feedback; coaches have no concrete,
+  prioritized action per call.
+- **Improvement:** the operator pastes the transcript and in ~1 minute gets
+  a consistent report (same rules for everyone), with cited evidence, "the
+  one thing", brief, red flags and quick fix per dimension — downloadable
+  as a PDF and accessible via persistent URL.
 
 ## Business Rules
 
 | Rule | Description | Enforcement |
 |------|-------------|-------------|
-| BR-001 | Cada run tiene una URL única y persistente; el reporte se recupera sin re-scorear | `run_id` UUID es primary key en Supabase; `?run_id=` en el dashboard lee lo almacenado |
-| BR-002 | Un run fallido debe exponer por qué falló | `error_reason` obligatorio cuando `status=failed` (validación en `src/schemas.py`) |
-| BR-003 | Los puntajes se validan contra la rúbrica: máximo por dimensión, bandas válidas y caps automáticos | `build_report` en `src/scoring.py` valida en código; el LLM nunca calcula totales ni bandas |
-| BR-004 | Solo la dimensión D4 (coaching) es opcional; deshabilitada el máximo pasa a 85 | Validación rechaza `disabled` en cualquier otra dimensión; grade calculado sobre 85 |
-| BR-005 | El transcript es dato no confiable: no puede instruir al modelo | `sanitize.py` remueve caracteres de control/invisibles y líneas con patrones de inyección (auditadas en `sanitization_flags`); el prompt lo enmarca entre delimitadores |
-| BR-006 | Transcript vacío o con menos de 4 turnos de hablante → run `failed` con causa | `guardrail_node` antes de cualquier llamada LLM |
-| BR-007 | Toda dimensión no opcional debe tener score; la evidencia debe citar líneas del transcript | Contrato JSON en el prompt + validación + reintento único (`score_transcript`) |
-| BR-008 | El scoring sobrevive al cierre de la pestaña | Ejecución en background en la API + persistencia en Supabase |
-| BR-009 | El PDF solo existe para runs `completed` | `GET /runs/{id}/report.pdf` responde 409 con explicación en otro estado |
-| BR-010 | El tipo de llamada determina la rúbrica | Router del grafo LangGraph con arista condicional kickoff/coaching |
-| BR-011 | Configuración incompleta impide arrancar, nombrando la variable faltante | `get_settings` falla rápido con `ConfigError` explícito |
+| BR-001 | Every run has a unique, persistent URL; the report is retrieved without re-scoring | `run_id` UUID is primary key in Supabase; `?run_id=` in the dashboard reads stored data |
+| BR-002 | A failed run must expose why it failed | `error_reason` mandatory when `status=failed` (validation in `src/schemas.py`) |
+| BR-003 | Scores are validated against the rubric: per-dimension max, valid bands and automatic caps | `build_report` in `src/scoring.py` validates in code; the LLM never computes totals or bands |
+| BR-004 | Only dimension D4 (coaching) is optional; disabled it lowers the max to 85 | Validation rejects `disabled` on any other dimension; grade computed out of 85 |
+| BR-005 | The transcript is untrusted data: it cannot instruct the model | `sanitize.py` removes control/invisible characters and injection-pattern lines (audited in `sanitization_flags`); the prompt frames it between delimiters |
+| BR-006 | Empty transcript or fewer than 4 speaker turns → run `failed` with cause | `guardrail_node` before any LLM call |
+| BR-007 | Every non-optional dimension must have a score; evidence must cite transcript lines | JSON contract in the prompt + validation + single retry (`score_transcript`) |
+| BR-008 | Scoring survives tab closing | Background execution in the API + persistence in Supabase |
+| BR-009 | The PDF only exists for `completed` runs | `GET /runs/{id}/report.pdf` answers 409 with an explanation in any other state |
+| BR-010 | The call type determines the rubric | LangGraph router with conditional kickoff/coaching edge |
+| BR-011 | Incomplete configuration prevents startup, naming the missing variable | `get_settings` fails fast with an explicit `ConfigError` |
 
 ## System Design
 
 ### Components
 
-- **API (FastAPI, `src/api/`)** — recibe `POST /runs` (transcript +
-  call_type), crea el run y dispara el scoring en background; expone
-  `GET /runs/{id}` (estado/reporte/causa) y `GET /runs/{id}/report.pdf`.
-  Depende de Supabase y del cliente LLM.
-- **Grafo LangGraph (`src/agent/`)** — orquesta el flujo: router →
-  guardrails → scorer (kickoff|coaching). Estado tipado en `state.py`;
-  nodos puros testeables en `nodes.py`; sanitización en `sanitize.py`.
-- **Motor de scoring (`src/scoring.py`)** — construye el prompt (rúbrica +
-  transcript enmarcado + contrato JSON), valida el output contra la rúbrica
-  (caps, bandas, D4 opcional), calcula grade/banda localmente y reintenta
-  una vez ante violaciones del contrato.
-- **Clientes LLM (`src/llm_client.py`)** — Groq y Anthropic sin
-  dependencias externas, transporte HTTP inyectable, errores explícitos,
-  reintento de JSON truncado. Seleccionable con `LLM_PROVIDER`.
-- **Persistencia (Supabase, `src/database/`)** — tabla `beaverops` como
-  única fuente de verdad: estado, transcript, reporte JSON, error_reason,
-  timestamps. Repositorio con protocolo inyectable (in-memory para tests).
-- **PDF (`src/pdf_creation/`)** — render determinista del `Report` a PDF
-  con fpdf2 según `pdf_format.md`.
-- **Dashboard (Streamlit, `src/frontend/`)** — UI del operador: crear
-  evaluación, estado en vivo, reporte completo, descarga PDF y apertura de
-  runs por URL persistente (`?run_id=`).
+- **API (FastAPI, `src/api/`)** — receives `POST /runs` (transcript +
+  call_type), creates the run and triggers scoring in the background; exposes
+  `GET /runs/{id}` (status/report/cause) and `GET /runs/{id}/report.pdf`.
+  Depends on Supabase and the LLM client.
+- **LangGraph graph (`src/agent/`)** — orchestrates the flow: router →
+  guardrails → scorer (kickoff|coaching). Typed state in `state.py`;
+  pure testable nodes in `nodes.py`; sanitization in `sanitize.py`.
+- **Scoring engine (`src/scoring.py`)** — builds the prompt (rubric +
+  framed transcript + JSON contract), validates output against the rubric
+  (caps, bands, optional D4), computes grade/band locally and retries once
+  on contract violations.
+- **LLM clients (`src/llm_client.py`)** — Groq and Anthropic without
+  external dependencies, injectable HTTP transport, explicit errors,
+  truncated-JSON retry. Selectable via `LLM_PROVIDER`.
+- **Persistence (Supabase, `src/database/`)** — table `beaverops` as the
+  single source of truth: status, transcript, report JSON, error_reason,
+  timestamps. Repository with an injectable protocol (in-memory for tests).
+- **PDF (`src/pdf_creation/`)** — deterministic render of the `Report` to
+  PDF with fpdf2 following `pdf_format.md`.
+- **Dashboard (Streamlit, `src/frontend/`)** — operator UI: create
+  evaluation, live status, full report, PDF download and opening runs by
+  persistent URL (`?run_id=`).
 
 ### Architecture
 
 ```mermaid
 flowchart TD
-    Operator[Operador - Streamlit] -->|POST /runs| API[FastAPI]
+    Operator[Operator - Streamlit] -->|POST /runs| API[FastAPI]
     Operator -->|GET ?run_id=| API
-    API -->|crea run| Supabase[(Supabase: beaverops)]
-    API -->|scoring en background| Graph[Grafo LangGraph]
-    Graph -->|guardrails| Sanitize[Sanitización anti-inyección]
-    Graph -->|prompt + rúbrica| LLM[LLM: Groq o Anthropic]
-    LLM -->|JSON| Scoring[Validación vs rúbrica + grade]
+    API -->|creates run| Supabase[(Supabase: beaverops)]
+    API -->|background scoring| Graph[LangGraph Graph]
+    Graph -->|guardrails| Sanitize[Anti-injection sanitization]
+    Graph -->|prompt + rubric| LLM[LLM: Groq or Anthropic]
+    LLM -->|JSON| Scoring[Rubric validation + grade]
     Scoring -->|Report| Supabase
     API -->|GET /runs/id| Supabase
     API -->|GET /runs/id/report.pdf| PDF[fpdf2]
     PDF --> Operator
-    Supabase -->|reporte persistido| Operator
+    Supabase -->|persisted report| Operator
 ```
 
 ### Data flow
 
-1. El operador pega el transcript y elige kick-off/coaching; el dashboard
-   hace `POST /runs` y muestra la **URL persistente** del run.
-2. La API crea el run (`pending`) en Supabase y ejecuta el grafo en un hilo
-   de background (`scoring`).
-3. Guardrails: sanitización anti-inyección + mínimo de turnos; cualquier
-   fallo deja el run `failed` con `error_reason` antes de gastar tokens.
-4. El scorer construye el prompt, llama al LLM y valida el JSON contra la
-   rúbrica (reintentos acotados ante JSON truncado o contrato violado).
-5. El `Report` validado se persiste (`completed`); el dashboard hace polling
-   hasta verlo y ofrece el PDF. La URL del run sigue sirviendo el reporte
-   desde Supabase indefinidamente, sin re-scorear.
+1. The operator pastes the transcript and picks kick-off/coaching; the
+   dashboard issues `POST /runs` and shows the run's **persistent URL**.
+2. The API creates the run (`pending`) in Supabase and runs the graph in a
+   background thread (`scoring`).
+3. Guardrails: anti-injection sanitization + minimum turn count; any
+   failure leaves the run `failed` with `error_reason` before spending
+   tokens.
+4. The scorer builds the prompt, calls the LLM and validates the JSON
+   against the rubric (bounded retries on truncated JSON or contract
+   violations).
+5. The validated `Report` is persisted (`completed`); the dashboard polls
+   until it sees it and offers the PDF. The run URL keeps serving the report
+   from Supabase indefinitely, without re-scoring.
 
 ## Technology Stack
 
-- **Lenguaje:** Python 3.11+, gestionado con `uv`
+- **Language:** Python 3.11+, managed with `uv`
 - **API:** FastAPI + uvicorn
-- **Orquestación:** LangGraph
-- **Modelos:** Pydantic v2 (schemas de dominio y de wire)
-- **LLM:** Groq (`groq/compound-mini`, GPT-OSS 120B) o Anthropic
-  (`claude-sonnet-5`, `claude-opus-5`), seleccionables por entorno
-- **Persistencia:** Supabase (PostgreSQL + PostgREST)
+- **Orchestration:** LangGraph
+- **Models:** Pydantic v2 (domain and wire schemas)
+- **LLM:** Groq (`groq/compound-mini`, GPT-OSS 120B) or Anthropic
+  (`claude-sonnet-5`, `claude-opus-5`), selectable via environment
+- **Persistence:** Supabase (PostgreSQL + PostgREST)
 - **PDF:** fpdf2
-- **Frontend:** Streamlit (cliente HTTP con `MockTransport` para tests)
-- **Tests:** pytest (137 tests, sin red ni credenciales reales)
+- **Frontend:** Streamlit (HTTP client with `MockTransport` for tests)
+- **Tests:** pytest (138 tests, no network or real credentials)
 
 ## Quickstart
 
 ```bash
-# 1. Credenciales (.env)
+# 1. Credentials (.env)
 cat > .env <<'EOF'
 SUPABASE_PROJECT_ID=<project-ref>
 SUPABASE_API_KEY=<anon key>
@@ -135,147 +136,148 @@ SUPABASE_SECRET_KEY=<service-role key>
 LLM_PROVIDER=anthropic            # groq | anthropic
 ANTHROPIC_API_KEY=<sk-ant-...>
 ANTHROPIC_MODEL=claude-opus-5
-# GROQ_API_KEY=<groq key>         # requerido si LLM_PROVIDER=groq
+# GROQ_API_KEY=<groq key>         # required if LLM_PROVIDER=groq
 EOF
 
-# 2. Crear la tabla en Supabase (SQL Editor) con src/database/schema.sql
+# 2. Create the table in Supabase (SQL Editor) from src/database/schema.sql
 
-# 3. Arrancar (terminales separadas)
-uv run python -m src.api.server            # API en :8000
-uv run streamlit run src/frontend/app.py   # dashboard en :8501
+# 3. Run (separate terminals)
+uv run python -m src.api.server            # API on :8000
+uv run streamlit run src/frontend/app.py   # dashboard on :8501
 ```
 
-## Engineering Decisions (y trade-offs)
+## Engineering Decisions (and trade-offs)
 
-1. **Rúbrica de coaching ajustada 105 → 100.** La rúbrica declaraba 100 pts
-   pero sumaba 105 (D6 valía 15). Se redujo D6 a 10 pts para que cuadre con
-   lo que la propia rúbrica declara (100 con D4, 85 sin D4).
-   *Trade-off:* los buckets de D6 difieren del markdown original, que no se
-   tocó para no alterar el insumo.
+1. **Coaching rubric adjusted 105 → 100.** The rubric declared 100 pts but
+   added up to 105 (D6 was worth 15). D6 was reduced to 10 pts so it matches
+   what the rubric itself declares (100 with D4, 85 without).
+   *Trade-off:* D6 buckets differ from the original markdown, which was not
+   touched to avoid altering the input.
 
-2. **Sin límite de longitud de transcript.** El guardrail original fallaba
-   runs > 60k chars; los transcripts reales (~68k) lo disparaban. Hoy
-   cualquier longitud se acepta y la capa de prompt trunca a
-   `PROMPT_TRANSCRIPT_BUDGET_CHARS` con marcador explícito. La sanitización
-   anti-inyección se mantiene intacta. *Trade-off:* con Groq free tier el
-   presupuesto efectivo lo pone el TPM (ver Limitaciones).
+2. **No transcript length limit.** The original guardrail failed runs over
+   60k chars; real transcripts (~68k) triggered it. Any length is now
+   accepted and the prompt layer truncates at
+   `PROMPT_TRANSCRIPT_BUDGET_CHARS` with an explicit marker. Anti-injection
+   sanitization stays intact. *Trade-off:* on Groq free tier the TPM sets
+   the effective budget (see Limitations).
 
-3. **Tabla Supabase tal como existe (`beaverops`, `updatet_at`).** El
-   repositorio mapea `updatet_at` ↔ `updated_at` (typo incluido) para no
-   exigir una migración DDL. *Trade-off:* convivimos con el typo, mapeo
-   centralizado y testeado.
+3. **Supabase table as-is (`beaverops`, `updatet_at`).** The repository maps
+   `updatet_at` ↔ `updated_at` (typo included) instead of demanding a DDL
+   migration. *Trade-off:* we live with the typo; mapping is centralized
+   and tested.
 
-4. **Reintentos acotados ante fallos del LLM.** (a) JSON truncado por
-   varianza de rate limit → 1 reintento a los 15 s; (b) contrato de rúbrica
-   violado (p. ej. deshabilitar D12) → 1 reintento (`score_transcript`);
-   (c) si persiste, run `failed` con causa explícita. *Trade-off:* un run
-   puede tardar hasta ~2× en fallar definitivamente; a cambio la mayoría de
-   fallos transitorios se recuperan solos.
+4. **Bounded retries on LLM failures.** (a) JSON truncated by rate-limit
+   variance → 1 retry after 15 s; (b) rubric contract violated (e.g.
+   disabling D12) → 1 retry (`score_transcript`);
+   (c) if it persists, run `failed` with an explicit cause. *Trade-off:* a
+   run can take up to ~2× longer to fail definitively; in exchange most
+   transient failures recover on their own.
 
-5. **Validación estricta del output.** Scores fuera de rango, bandas
-   inválidas o dimensiones ilegalmente deshabilitadas rechazan el run.
-   *Trade-off:* más runs `failed` con causa clara frente a reportes
-   incorrectos silenciosos.
+5. **Strict output validation.** Out-of-range scores, invalid bands or
+   illegally disabled dimensions reject the run. *Trade-off:* more `failed`
+   runs with a clear cause instead of silent incorrect reports.
 
-6. **Scoring en background + polling.** `POST /runs` responde 201 al
-   instante. *Trade-off:* el trabajo vive en el proceso de la API (sin cola
-   externa); un reinicio a mitad de scoring deja el run `scoring` huérfano.
+6. **Background scoring + polling.** `POST /runs` responds 201 immediately.
+   *Trade-off:* the work lives in the API process (no external queue); a
+   restart mid-scoring leaves the run orphaned in `scoring`.
 
-7. **Clientes LLM sin SDK externo.** urllib + transporte inyectable.
-   *Trade-off:* algo más de código propio a cambio de cero dependencias y
-   tests sin red.
+7. **LLM clients without an external SDK.** urllib + injectable transport.
+   *Trade-off:* a bit more in-house code in exchange for zero dependencies
+   and network-free tests.
 
-8. **Ajustes descubiertos en pruebas reales (documentados en código):**
-   Cloudflare rechaza el User-Agent de urllib frente a Groq (error 1010) →
-   UA propio; `exclude-newer` en `pyproject.toml` rompía uv → eliminado;
-   Claude Opus 5 deprecó `temperature`, necesita `max_tokens=32000` y
-   timeout de 600 s para transcripts largos.
+8. **Adjustments discovered during real testing (documented in code):**
+   Cloudflare rejects urllib's User-Agent against Groq (error 1010) → custom
+   UA; `exclude-newer` in `pyproject.toml` broke uv → removed;
+   Claude Opus 5 deprecated `temperature`, needs `max_tokens=32000` and a
+   600 s timeout for long transcripts.
 
 ## Reliability
 
-- Todo fallo es explícito y persistido: `error_reason` visible en la API y
-  en el dashboard (BR-002).
-- Reintentos en dos niveles (transporte/JSON y contrato de rúbrica) con
-  límites fijos; nunca `except` desnudo.
-- Guardrails previos al gasto de tokens: vacío, muy corto, inyección.
-- Estado íntegro en Supabase: la API es stateless y puede reiniciarse sin
-  perder runs completados.
-- Suite de 137 tests corre en segundos sin red ni credenciales.
+- Every failure is explicit and persisted: `error_reason` visible in the
+  API and dashboard (BR-002).
+- Retries at two levels (transport/JSON and rubric contract) with fixed
+  bounds; never a bare `except`.
+- Guardrails before spending tokens: empty, too short, injection.
+- Full state in Supabase: the API is stateless and can restart without
+  losing completed runs.
+- The 138-test suite runs in seconds with no network or credentials.
 
 ## Testing
 
-- `uv run pytest` — 137 tests: schemas/config, rúbricas, cliente LLM (fake
-  transport), grafo y guardrails, scoring (validación, caps, D4, reintentos,
-  truncado), repositorio (in-memory + fake Supabase), API (6 casos con
-  dependencias inyectadas), PDF (bytes `%PDF`, secciones), E2E con stubs
-  deterministas para kickoff y coaching, cliente del dashboard.
-- Verificación E2E real ejecutada con credenciales reales: transcript de
-  68k chars → `completed` (Opus 5) → PDF de 5 páginas; camino de fallo con
-  causa visible.
+- `uv run pytest` — 138 tests: schemas/config, rubrics, LLM client (fake
+  transport), graph and guardrails, scoring (validation, caps, D4, retries,
+  truncation), repository (in-memory + fake Supabase), API (6 cases with
+  injected dependencies), PDF (`%PDF` bytes, sections), E2E with
+  deterministic stubs for kickoff and coaching, dashboard client.
+- Real E2E verification executed with real credentials: 68k-char transcript
+  → `completed` (Opus 5) → 5-page PDF; failure path with a visible cause.
 
 ## Limitations
 
-- **Groq free tier:** 8k TPM en gpt-oss-120b obliga a truncar transcripts
-  largos (compound-mini sube a 70k TPM pero solo 250 req/día).
-- **Scoring in-process:** sin cola externa, un crash de la API durante el
-  scoring deja el run en `scoring` (no hay worker de recuperación).
-- **Sin auth:** la API es abierta y usa la service-role key server-side;
-  solo apta para uso interno/desarrollo.
-- **Columna `updatet_at`** sin timezone en Supabase (mapeada en código).
-- **Polling** cada 2 s desde el dashboard (no hay push).
+- **Groq free tier:** 8k TPM on gpt-oss-120b forces truncating long
+  transcripts (compound-mini raises it to 70k TPM but only 250 req/day).
+- **In-process scoring:** no external queue; an API crash mid-scoring
+  leaves the run in `scoring` (no recovery worker).
+- **No auth:** the API is open and uses the service-role key server-side;
+  internal use/development only.
+- **`updatet_at` column** without timezone in Supabase (mapped in code).
+- **Polling** every 2 s from the dashboard (no push).
 
-## Formas de escalar
+## Scaling Options
 
-**Capacidad de LLM**
-- *Groq Dev Tier* (250k TPM) o Anthropic: elimina truncado y rate limits
-  sin cambiar código.
-- *Scoring por chunks multi-pasada:* extraer evidencia por chunk y puntuar
-  en una pasada final consolidada — cobertura completa incluso en free
-  tier; coste: 2-3× llamadas por run.
-- *Prompt caching:* rúbrica + contrato son idénticos entre runs; los
-  proveedores con caching reducen coste/latencia.
+**LLM capacity**
 
-**Fiabilidad y volumen**
-- *Cola externa* (RQ/Celery/Redis o Supabase Queues) en lugar del hilo
-  in-process: runs sobreviven a reinicios, reintentos con backoff, API
-  horizontal sin sesiones pegajosas.
-- *Webhooks/SSE* en lugar de polling.
-- *Backoff exponencial respetando `Retry-After`* en el cliente LLM.
+- *Groq Dev Tier* (250k TPM) or Anthropic: removes truncation and rate
+  limits without changing code.
+- *Multi-pass chunk scoring:* extract evidence per chunk and score in a
+  final consolidated pass — full coverage even on free tier; cost: 2–3×
+  calls per run.
+- *Prompt caching:* rubric + contract are identical across runs; providers
+  with caching reduce cost/latency.
 
-**Producto y operación**
-- *Auth + RLS* (Supabase Auth) antes de exponer fuera del equipo.
-- *Historial por operador/cliente* (campos coach/client/program de
-  `design-mocks/`) y comparativa entre runs.
-- *Observabilidad:* trazas por nodo del grafo, tokens/coste por run,
-  alertas sobre tasa de `failed`.
-- *PDF cacheado* en Supabase Storage si crece el volumen de descargas.
+**Reliability and volume**
 
-## Deploy
+- *External queue* (RQ/Celery/Redis or Supabase Queues) instead of the
+  in-process thread: runs survive restarts, retries with backoff, horizontal
+  API without sticky sessions.
+- *Webhooks/SSE* instead of polling.
+- *Exponential backoff honoring `Retry-After`* in the LLM client.
 
-**API en Vercel** (scoring síncrono):
+**Product and operations**
 
-1. Environment Variables en el dashboard de Vercel: las de `.env`
-   (Supabase, LLM) **más `SCORING_MODE=sync`** — las funciones serverless se
-   congelan tras la respuesta, así que el scoring corre inline y el `201`
-   ya trae el estado final (`completed`/`failed`).
-2. `vercel.json` fija `maxDuration=300` (requiere plan Pro para Opus con
-   transcripts largos; en Hobby de 60 s usa `claude-sonnet-5`).
-3. `requirements.txt` (export de uv) alimenta el runtime Python;
-   entrypoint en `api/index.py`.
+- *Auth + RLS* (Supabase Auth) before exposing beyond the team.
+- *Per-operator/client history* (`coach`/`client`/`program` fields from
+  `design-mocks/`) and cross-run comparison.
+- *Observability:* traces per graph node, tokens/cost per run, alerts on
+  the `failed` rate.
+- *Cached PDF* in Supabase Storage if download volume grows.
 
-**Dashboard en Streamlit Community Cloud:**
+## Deploy (Render)
 
-- Repo + branch + `src/frontend/app.py`; en "Secrets" añade
-  `SCORING_API_URL=https://<tu-app>.vercel.app`.
-- Las URLs persistentes de los runs (`https://<streamlit-app>/?run_id=<uuid>`)
-  siguen funcionando: el reporte vive en Supabase, no en el deploy.
+Both services deploy from one [`render.yaml`](render.yaml) blueprint
+(Render → New → Blueprint → pick this repo):
 
-## Desarrollo
+- **scoring-api** — FastAPI served by uvicorn:
+  `uvicorn src.api.server:app --host 0.0.0.0 --port $PORT`
+- **scoring-dashboard** — Streamlit UI:
+  `streamlit run src/frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true`,
+  with `SCORING_API_URL` wired automatically to the API service host.
 
-- Workflow: Spec Driven Development — `docs/specs.md`; features y estados
-  en `settings_files_tasks.json`; un feature a la vez, spec aprobada antes
-  de codificar.
-- Estructura: `specs/<feature>/`, `progress/`, `design-mocks/`,
-  `docs/ADR.md` (log de decisiones), `skills/` (security-review,
+Set these environment variables (both services read them at startup):
+`SUPABASE_PROJECT_ID`, `SUPABASE_API_KEY`, `SUPABASE_SECRET_KEY`, and the
+provider key (`GROQ_API_KEY` by default, or `ANTHROPIC_API_KEY` +
+`LLM_PROVIDER=anthropic`). No `SCORING_MODE` override needed: Render
+services are long-lived processes, so the default background scoring works.
+
+Run URLs stay persistent forever because reports live in Supabase, not in
+the deployment.
+
+## Development
+
+- Workflow: Spec Driven Development — `docs/specs.md`; features and states
+  in `settings_files_tasks.json`; one feature at a time, spec approved
+  before coding.
+- Structure: `specs/<feature>/`, `progress/`, `design-mocks/`,
+  `docs/ADR.md` (decision log), `skills/` (security-review,
   engineering-readme).
-- Verificación: `uv run pytest` antes de dar un cambio por terminado.
+- Verification: `uv run pytest` before considering a change done.

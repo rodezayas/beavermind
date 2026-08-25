@@ -1,16 +1,16 @@
 # Design — database_supabase
 
-> Cómo se construye la feature 6. Decisiones tomadas antes de escribir código.
+> How feature 6 is built. Decisions made before writing any code.
 
 ## Files created / modified
 
 | File | Action | Purpose |
 |---|---|---|
-| `src/database/__init__.py` | create | paquete |
-| `src/database/schema.sql` | create | DDL de la tabla `runs` |
+| `src/database/__init__.py` | create | package |
+| `src/database/schema.sql` | create | DDL for the `runs` table |
 | `src/database/repository.py` | create | `RepositoryError`, `RunRepository`, `SupabaseRunRepository`, `InMemoryRunRepository` |
-| `tests/test_database.py` | create | cobertura R2–R8 contra `InMemoryRunRepository` |
-| `pyproject.toml` | modify | agregar `supabase` (aprobada) |
+| `tests/test_database.py` | create | covers R2–R8 against `InMemoryRunRepository` |
+| `pyproject.toml` | modify | add `supabase` (approved) |
 
 ## Schema (schema.sql)
 
@@ -27,8 +27,8 @@ create table if not exists runs (
 );
 ```
 
-RLS: el acceso será service-role desde el backend (secret key en Settings);
-ninguna clave va al cliente.
+RLS: access will be service-role from the backend (secret key in Settings);
+no key goes to the client.
 
 ## New signatures
 
@@ -41,31 +41,31 @@ class RunRepository(Protocol):
     def get(self, run_id: UUID) -> Run | None: ...
     def update(self, run: Run) -> Run: ...
 
-class SupabaseRunRepository:  # construido con (client: Client)
-class InMemoryRunRepository:  # dict interno, para tests/dev
+class SupabaseRunRepository:  # built with (client: Client)
+class InMemoryRunRepository:  # internal dict, for tests/dev
 ```
 
-Serialización: `Run.model_dump(mode="json")` ↔ `Run.model_validate(row)` —
-una sola fuente de verdad para el formato de fila.
+Serialization: `Run.model_dump(mode="json")` ↔ `Run.model_validate(row)` —
+a single source of truth for the row format.
 
 ## Decisions
-- **Protocolo `RunRepository` + dos implementaciones**: la API y el agente
-  dependen del protocolo; Supabase es un detalle. Los tests corren con
-  `InMemoryRunRepository` sin red ni credenciales.
-- **`report` como jsonb**: el reporte se consulta completo por run_id (nunca
-  por campos internos), así que no hace falta normalizar las 12 dimensiones.
-- **`updated_at` lo toca el repository en cada `update`** (R7), no el modelo.
+- **`RunRepository` protocol + two implementations**: the API and the agent
+  depend on the protocol; Supabase is a detail. Tests run with
+  `InMemoryRunRepository` without network or credentials.
+- **`report` as jsonb**: the report is fetched whole by run_id (never by
+  internal fields), so there is no need to normalize the 12 dimensions.
+- **`updated_at` is touched by the repository at each `update`** (R7), not by the model.
 
 ## Alternative discarded
-- SQLite local: descartado porque el requisito de negocio exige que la URL del
-  run siga funcionando "next week" desde cualquier proceso/despliegue — se
-  necesita almacenamiento administrado compartido (Supabase, ya en el stack).
+- Local SQLite: discarded because the business requirement demands that the run
+  URL keeps working "next week" from any process/deployment — shared managed
+  storage is needed (Supabase, already in the stack).
 
 ## Traceability preview
-- R1 → revisión de `schema.sql` + `test_roundtrip_preserves_all_fields`
+- R1 → review of `schema.sql` + `test_roundtrip_preserves_all_fields`
 - R2, R4 → `test_in_memory_repository_roundtrip`
 - R5 → `test_create_returns_run`
 - R6 → `test_get_missing_returns_none`
 - R7 → `test_update_persists_failure_with_reason`, `test_update_refreshes_updated_at`
 - R8 → `test_repository_error_wraps_cause`
-- R9 → decisión estructural (protocolo + persistencia única); verificación en e2e
+- R9 → structural decision (protocol + single persistence); verified in e2e

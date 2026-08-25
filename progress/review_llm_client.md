@@ -2,10 +2,10 @@
 
 **Verdict: APPROVED**
 
-- R1–R6 cubiertos cada uno por al menos un test concreto (trazabilidad en
-  `progress/impl_llm_client.md`); `uv run pytest` verde (27 passed).
-- Tareas de `specs/llm_client/tasks.md` completadas sin desviaciones.
-- Convenciones respetadas: type hints, docstrings, errores explícitos con
-  contexto y `raise ... from`, protocolo `Transport` inyectable.
-- Security review: la API key nunca se loguea ni aparece en mensajes de error;
-  URL fija https; timeout explícito; sin `except:` desnudo.
+- R1–R6 each covered by at least one concrete test (traceability in
+  `progress/impl_llm_client.md`); `uv run pytest` green (27 passed).
+- Tasks from `specs/llm_client/tasks.md` completed without deviations.
+- Conventions respected: type hints, docstrings, explicit errors with
+  context and `raise ... from`, injectable `Transport` protocol.
+- Security review: the API key is never logged nor appears in error messages;
+  fixed https URL; explicit timeout; no bare `except:`.

@@ -1,0 +1,34 @@
+# Render Blueprint: provisioning both services of the scoring system.
+#
+# Deploy with the "Blueprint" option on Render or:
+#   render blueprint launch
+#
+# Required environment variables (set per environment in the Render
+# dashboard, or via `render env-vars set`): SUPABASE_PROJECT_ID,
+# SUPABASE_API_KEY, SUPABASE_SECRET_KEY and the LLM provider key
+# (GROQ_API_KEY by default; see src/config.py).
+
+services:
+  # Scoring API: FastAPI app served by uvicorn. Long-lived process, so the
+  # default background scoring mode works (no SCORING_MODE override needed).
+  - type: web
+    name: scoring-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /docs
+
+  # Operator dashboard: Streamlit app talking to the API over HTTP.
+  - type: web
+    name: scoring-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run src/frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: SCORING_API_URL
+        fromService:
+          type: web
+          name: scoring-api
+          property: host

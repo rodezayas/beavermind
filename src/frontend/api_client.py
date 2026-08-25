@@ -18,9 +18,9 @@ from src.schemas import CallType
 #: never wait on the LLM itself.
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
-#: Timeout for POST /runs: with SCORING_MODE=sync (the Vercel/serverless
-#: configuration) that request scores inline and only returns once the LLM
-#: finished, so it needs to outlast the whole scoring pipeline.
+#: Timeout for POST /runs: with SCORING_MODE=sync that request scores inline
+#: and only returns once the LLM finished, so it needs to outlast the whole
+#: scoring pipeline. With the default background mode the POST returns fast.
 CREATE_RUN_TIMEOUT_SECONDS = 90.0
 
 

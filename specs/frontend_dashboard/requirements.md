@@ -1,9 +1,9 @@
 # Requirements — frontend_dashboard
 
-> Feature 10 de `settings_files_tasks.json`. Estado: `spec_ready` (esperando aprobación humana).
-> **Nota:** la tecnología de UI está abierta (Streamlit vs React + Node.js); estos requisitos
-> son tecnológicamente neutrales. La decisión se registra en `design.md` y se cierra antes
-> de implementar.
+> Feature 10 from `settings_files_tasks.json`. Status: `spec_ready` (awaiting human approval).
+> **Note:** the UI technology is open (Streamlit vs React + Node.js); these requirements
+> are technology-neutral. The decision is recorded in `design.md` and closed before
+> implementing.
 
 ## R1
 The UI MUST let the operator paste a call transcript and select the call type
