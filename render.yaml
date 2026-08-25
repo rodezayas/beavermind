@@ -27,10 +27,12 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run src/frontend/app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
     envVars:
-      # Injected as a bare hostname (e.g. scoring-api-ab12.onrender.com);
-      # ScoringApiClient adds the https:// scheme when it is missing.
+      # RENDER_EXTERNAL_URL of the API service is its full public URL,
+      # e.g. https://scoring-api-ab12.onrender.com (scheme included).
+      # Note: `property: host` returns the *private* network hostname
+      # (e.g. scoring-api:10000), which is unreachable over HTTPS.
       - key: SCORING_API_URL
         fromService:
           type: web
           name: scoring-api
-          property: host
+          envVarKey: RENDER_EXTERNAL_URL

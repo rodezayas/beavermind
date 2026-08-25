@@ -151,7 +151,12 @@ def _esc(text: str) -> str:
 
 
 def _client() -> ScoringApiClient:
-    """Build the API client from the SCORING_API_URL environment variable."""
+    """Build the API client from the SCORING_API_URL environment variable.
+
+    Returns:
+        A client whose base URL is normalized (scheme added when missing),
+        so a bare hostname injected by the platform still works.
+    """
     base_url = os.environ.get("SCORING_API_URL", "http://localhost:8000")
     return ScoringApiClient(base_url)
 
@@ -239,18 +244,37 @@ def _score_arc(total: float, max_possible: float, band: str) -> str:
     """
 
 
+#: Consecutive polling failures tolerated before giving up (free-tier cold
+#: starts can briefly refuse connections while the API instance boots)
+MAX_POLL_FAILURES = 10
+
+
 def _poll_until_done(client: ScoringApiClient, run_id: UUID) -> None:
-    """Poll GET /runs/{id} until terminal state, updating the status UI (R2)."""
+    """Poll GET /runs/{id} until terminal state, updating the status UI (R2).
+
+    Transient transport failures (e.g. the free-tier API waking up) do not
+    abort the poll: only after `MAX_POLL_FAILURES` consecutive errors does
+    it surface a reason.
+    """
     status_box = st.empty()
     spinner = st.spinner("Scoring in progress…")
     spinner.__enter__()
+    consecutive_failures = 0
     try:
         while True:
             try:
                 run = client.get_run(run_id)
+                consecutive_failures = 0
             except ApiClientError as exc:
-                st.error(f"Could not fetch the run status: {exc.reason}")
-                return
+                consecutive_failures += 1
+                if consecutive_failures >= MAX_POLL_FAILURES:
+                    st.error(
+                        f"Could not fetch the run status after "
+                        f"{consecutive_failures} attempts: {exc.reason}"
+                    )
+                    return
+                time.sleep(POLL_INTERVAL_SECONDS)
+                continue
             if run.status in (RunStatus.COMPLETED, RunStatus.FAILED):
                 return
             status_box.info(f"Run status: **{run.status.value}**…")
@@ -372,6 +396,9 @@ def _home_view(client: ScoringApiClient) -> None:
     """
     st.markdown("## Run an evaluation")
     st.markdown('<div class="run-sub">Score one call at a time against its rubric.</div>', unsafe_allow_html=True)
+    # Show where requests actually go, so a misrouted SCORING_API_URL is
+    # visible at a glance instead of failing silently on submit.
+    st.caption(f"Scoring API: `{client.base_url}`")
 
     selected: CallType | None = st.session_state.get("selected_call_type")
 

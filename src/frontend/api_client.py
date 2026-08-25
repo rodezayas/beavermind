@@ -59,6 +59,11 @@ class ScoringApiClient:
         self._client = client or httpx.Client(timeout=timeout)  # injected in tests
         self._base_url = _normalize_base_url(base_url)
 
+    @property
+    def base_url(self) -> str:
+        """The normalized API base URL used for every request (for diagnostics)."""
+        return self._base_url
+
     def create_run(self, transcript: str, call_type: CallType) -> CreateRunResponse:
         """POST /runs and return run id + URL + initial status (R1, R2).
 
@@ -145,7 +150,10 @@ def _normalize_base_url(base_url: str) -> str:
     # Bare "host[:port]" form: inspect the host to pick the right scheme
     first_segment = trimmed.split("/", 1)[0]  # ignore any path portion
     host = first_segment.split(":", 1)[0].lower()  # strip the port if present
-    scheme = "http" if host in _LOCAL_HOSTS else "https"
+    # Plain HTTP only for local targets and dot-less internal hostnames
+    # (e.g. Render's private network names like "scoring-api"); anything
+    # else is a public host and gets TLS.
+    scheme = "http" if host in _LOCAL_HOSTS or "." not in host else "https"
     return f"{scheme}://{trimmed}"
 
 
