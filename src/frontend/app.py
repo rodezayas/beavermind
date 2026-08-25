@@ -166,14 +166,17 @@ def _run_url(run_id: str) -> str:
         run_id: The run identifier.
 
     Returns:
-        An absolute dashboard URL like `http://<host>/?run_id=<uuid>`.
+        An absolute dashboard URL like `https://<host>/?run_id=<uuid>`
+        (plain `http://` only when serving from a local host).
     """
     host = "localhost:8501"
     try:  # st.context is only available while serving a real request
         host = st.context.headers.get("Host", host)
     except Exception:
         pass  # fallback host keeps the URL usable in bare scripts/tests
-    return f"http://{host}/?run_id={run_id}"
+    hostname = host.split(":", 1)[0].lower()  # strip the port for the check
+    scheme = "http" if hostname in ("localhost", "127.0.0.1") else "https"
+    return f"{scheme}://{host}/?run_id={run_id}"
 
 
 def _report_view(client: ScoringApiClient, run_id: str) -> None:

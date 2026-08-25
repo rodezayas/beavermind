@@ -6,6 +6,7 @@ values or a single typed error carrying a human-readable `reason` (R7, R8).
 This keeps the UI logic testable without a live server.
 """
 
+from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
@@ -13,6 +14,9 @@ from pydantic import ValidationError
 
 from src.api.schemas import CreateRunRequest, CreateRunResponse, RunResponse
 from src.schemas import CallType
+
+#: Hosts treated as local development targets (plain HTTP is fine there)
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 #: Default timeout for polling/status calls (GET /runs, PDF download): these
 #: never wait on the LLM itself.
@@ -45,13 +49,15 @@ class ScoringApiClient:
         """Create a client bound to the API base URL.
 
         Args:
-            base_url: e.g. "http://localhost:8000" (no trailing slash needed).
+            base_url: e.g. "http://localhost:8000" or "my-api.onrender.com"
+                (no trailing slash needed; a missing scheme is filled in —
+                Render's `fromService: property: host` injects a bare host).
             client: Optional pre-built httpx.Client; tests inject one backed
                 by `httpx.MockTransport`. When omitted a real client is built.
             timeout: Per-request timeout in seconds.
         """
         self._client = client or httpx.Client(timeout=timeout)  # injected in tests
-        self._base_url = base_url.rstrip("/")
+        self._base_url = _normalize_base_url(base_url)
 
     def create_run(self, transcript: str, call_type: CallType) -> CreateRunResponse:
         """POST /runs and return run id + URL + initial status (R1, R2).
@@ -116,6 +122,31 @@ class ScoringApiClient:
         if response.status_code not in expected:
             raise ApiClientError(_reason_from(response), status_code=response.status_code)
         return response.json()
+
+
+def _normalize_base_url(base_url: str) -> str:
+    """Return `base_url` with an explicit scheme and no trailing slash.
+
+    Render's blueprint env-var injection (`property: host`) provides a bare
+    hostname such as `scoring-api-xxxx.onrender.com`; httpx refuses URLs
+    without a scheme, so one is added here: `https://` for remote hosts and
+    plain `http://` only for local development targets.
+
+    Args:
+        base_url: The configured base URL, with or without a scheme.
+
+    Returns:
+        A normalized base URL like `http://localhost:8000` or
+        `https://scoring-api-xxxx.onrender.com`.
+    """
+    trimmed = base_url.strip().rstrip("/")
+    if urlparse(trimmed).scheme in ("http", "https"):
+        return trimmed  # already absolute: nothing to fix
+    # Bare "host[:port]" form: inspect the host to pick the right scheme
+    first_segment = trimmed.split("/", 1)[0]  # ignore any path portion
+    host = first_segment.split(":", 1)[0].lower()  # strip the port if present
+    scheme = "http" if host in _LOCAL_HOSTS else "https"
+    return f"{scheme}://{trimmed}"
 
 
 def _reason_from(response: httpx.Response) -> str:

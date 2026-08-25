@@ -10,7 +10,11 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from src.frontend.api_client import ApiClientError, ScoringApiClient
+from src.frontend.api_client import (
+    ApiClientError,
+    ScoringApiClient,
+    _normalize_base_url,
+)
 from src.schemas import CallType, RunStatus
 
 #: A syntactically valid run id used across the fake responses
@@ -178,3 +182,50 @@ def test_non_json_error_body_still_yields_a_reason():
     with pytest.raises(ApiClientError) as excinfo:
         _client_for(handler).get_run(RUN_ID)
     assert "500" in excinfo.value.reason
+
+
+def test_normalize_base_url_render_host_gets_https():
+    """Render's `property: host` injects a bare hostname; https is added."""
+    assert (
+        _normalize_base_url("scoring-api-ab12.onrender.com")
+        == "https://scoring-api-ab12.onrender.com"
+    )
+
+
+def test_normalize_base_url_local_hosts_keep_http():
+    """Local development targets get plain http so the dev loop still works."""
+    assert _normalize_base_url("localhost:8000") == "http://localhost:8000"
+    assert _normalize_base_url("127.0.0.1:8000") == "http://127.0.0.1:8000"
+
+
+def test_normalize_base_url_absolute_urls_untouched():
+    """Already-absolute URLs pass through unchanged (trailing slash trimmed)."""
+    assert _normalize_base_url("https://api.example.com/") == "https://api.example.com"
+    assert _normalize_base_url("http://localhost:8000") == "http://localhost:8000"
+
+
+def test_client_requests_use_the_normalized_base_url():
+    """A bare-host base URL must reach httpx with an explicit scheme."""
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        return httpx.Response(
+            200,
+            json={
+                "run_id": RUN_ID,
+                "call_type": "kickoff",
+                "status": "pending",
+                "report": None,
+                "error_reason": None,
+                "created_at": "2026-08-24T10:00:00Z",
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = ScoringApiClient(
+        "scoring-api-ab12.onrender.com",
+        client=httpx.Client(transport=transport),
+    )
+    client.get_run(RUN_ID)
+    assert seen["url"] == f"https://scoring-api-ab12.onrender.com/runs/{RUN_ID}"
