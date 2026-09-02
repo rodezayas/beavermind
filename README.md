@@ -5,7 +5,6 @@ An operator emulator: paste a call transcript, indicate whether it is a
 *kick-off* or *coaching* call, and the system scores it against the matching
 rubric (12 dimensions, 100 pts) and returns a downloadable PDF report.
 - App url: https://beavermind.onrender.com/
-- Original Repo: https://github.com/lukecala/hiring-ai-dev-exercise
 
 ## Overview
 
